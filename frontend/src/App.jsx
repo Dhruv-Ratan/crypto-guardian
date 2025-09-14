@@ -1,19 +1,38 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import { ThemeProvider, useTheme } from './context/ThemeContext'
 import Sentiment from './pages/Sentiment'
+import Dashboard from './pages/Dashboard'
+import './styles.css'
+import Home from './pages/Home'
+
+function Navbar() {
+  const { theme, toggleTheme } = useTheme()
+  return (
+    <nav className="navbar">
+      <Link to="/">Home</Link>
+      <Link to="/sentiment">Sentiment Analyzer</Link>
+      <Link to="/dashboard">Dashboard</Link>
+      <button onClick={toggleTheme} className="theme-toggle">
+        {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+      </button>
+    </nav>
+  )
+}
 
 function App() {
   return (
-    <Router>
-      <nav style={{ padding: '10px', background: '#eee' }}>
-        <Link to="/" style={{ marginRight: '10px' }}>Home</Link>
-        <Link to="/sentiment">Sentiment Analyzer</Link>
-      </nav>
-      <Routes>
-        <Route path="/" element={<h1>CryptoGuardian AI</h1>} />
-        <Route path="/sentiment" element={<Sentiment />} />
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/" element={<h1>CryptoGuardian AI</h1>} />
+          <Route path="/sentiment" element={<Sentiment />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   )
 }
 

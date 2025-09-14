@@ -1,0 +1,47 @@
+.dashboard-container {
+    font-family: 'Segoe UI', sans-serif;
+    padding: 20px;
+    max-width: 900px;
+    margin: auto;
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 12px;
+}
+
+.dashboard-container h2 {
+    color: #007bff;
+    font-size: 24px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.crypto-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--card-border);
+}
+
+.crypto-table th,
+.crypto-table td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--card-border);
+    color: var(--text-color);
+}
+
+.crypto-table th {
+    background: #007bff;
+    color: #fff;
+}
+
+.crypto-table tr:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
