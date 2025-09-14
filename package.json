@@ -1,0 +1,18 @@
+{
+  "name": "crypto-guardian",
+  "version": "1.0.0",
+  "description": "Full-stack project: Backend (Express + PostgreSQL), Frontend (React + Vite), SQL schema in /sql",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Master Dhruv",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
