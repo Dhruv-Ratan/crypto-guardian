@@ -1,23 +1,19 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import Sentiment from './pages/Sentiment'
 
 function App() {
-  const [msg, setMsg] = useState('Loading...')
-
-  useEffect(() => {
-    axios.get('/api/hello')
-      .then(r => setMsg(r.data.msg))
-      .catch(err => {
-        console.error('Error connecting to backend:', err)
-        setMsg('Backend not reachable')
-      })
-  }, [])
-
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', textAlign: 'center', marginTop: '50px' }}>
-      <h1>CryptoGuardian AI</h1>
-      <p>{msg}</p>
-    </div>
+    <Router>
+      <nav style={{ padding: '10px', background: '#eee' }}>
+        <Link to="/" style={{ marginRight: '10px' }}>Home</Link>
+        <Link to="/sentiment">Sentiment Analyzer</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<h1>CryptoGuardian AI</h1>} />
+        <Route path="/sentiment" element={<Sentiment />} />
+      </Routes>
+    </Router>
   )
 }
 
