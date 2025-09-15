@@ -5,6 +5,7 @@ import Sentiment from './pages/Sentiment'
 import Dashboard from './pages/Dashboard'
 import './styles.css'
 import Home from './pages/Home'
+import Footer from './components/Footer'
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme()
@@ -31,6 +32,7 @@ function App() {
           <Route path="/sentiment" element={<Sentiment />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
+        <Footer />
       </Router>
     </ThemeProvider>
   )
