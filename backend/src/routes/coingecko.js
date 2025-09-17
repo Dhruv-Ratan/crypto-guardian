@@ -10,9 +10,9 @@ router.get("/top", async (req, res) => {
       params: {
         vs_currency,
         order: "market_cap_desc",
-        per_page: 10, 
+        per_page: 10,
         page: 1,
-        sparkline: false,
+        sparkline: true, 
         price_change_percentage: "24h,7d",
       },
     });
@@ -21,6 +21,16 @@ router.get("/top", async (req, res) => {
   } catch (err) {
     console.error("Error fetching market data:", err.message);
     res.status(500).json({ error: "Failed to fetch market data" });
+  }
+});
+
+router.get("/trending", async (req, res) => {
+  try {
+    const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
+    res.json(response.data);
+  } catch (err) {
+    console.error("Error fetching trending coins:", err.message);
+    res.status(500).json({ error: "Failed to fetch trending coins" });
   }
 });
 

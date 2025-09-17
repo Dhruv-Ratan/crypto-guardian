@@ -60,7 +60,7 @@
 }
 
 .crypto-table tr:hover {
-    background: rgba(0, 123, 255, 0.1);
+    background: rgba(0, 123, 255, 0.05);
 }
 
 .positive-change {
@@ -86,6 +86,19 @@
 
     .crypto-table th,
     .crypto-table td {
-        padding: 8px;
+        vertical-align: middle;
+        padding: 12px;
     }
+}
+
+.coin-link {
+    text-decoration: none;
+    color: inherit;
+    font-weight: bold;
+}
+
+.coin-link:hover {
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
 }
