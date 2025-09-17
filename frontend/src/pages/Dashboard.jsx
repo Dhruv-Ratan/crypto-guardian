@@ -1,50 +1,91 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
-import './Dashboard.css'
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import "./Dashboard.css";
 
 function Dashboard() {
-  const [prices, setPrices] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [coins, setCoins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const fetchData = async () => {
+    try {
+      const res = await axios.get("/api/coingecko/top?vs_currency=usd");
+      setCoins(res.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching crypto data:", err);
+    }
+  };
 
   useEffect(() => {
-    axios.get('/api/crypto/prices')
-      .then(res => {
-        setPrices(res.data)
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error(err)
-        setLoading(false)
-      })
-  }, [])
+    fetchData();
+    const interval = setInterval(fetchData, 15000); 
+    return () => clearInterval(interval);
+  }, []);
 
-  if (loading) return <p>Loading crypto prices...</p>
+  const filteredCoins = coins.filter(
+    (coin) =>
+      coin.name.toLowerCase().includes(search.toLowerCase()) ||
+      coin.symbol.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const renderChange = (value) => {
+    if (value == null) return "—";
+    const arrow = value >= 0 ? "↑" : "↓";
+    const cls = value >= 0 ? "positive-change" : "negative-change";
+    return <span className={cls}>{arrow} {value.toFixed(2)}%</span>;
+  };
 
   return (
     <div className="dashboard-container">
       <h2>📊 Crypto Dashboard</h2>
-      <table className="crypto-table">
-        <thead>
-          <tr>
-            <th>Coin</th>
-            <th>Price (USD)</th>
-            <th>24h Change (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.keys(prices).map((coin) => (
-            <tr key={coin}>
-              <td>{coin}</td>
-              <td>${prices[coin].usd.toLocaleString()}</td>
-              <td style={{ color: prices[coin].usd_24h_change >= 0 ? 'green' : 'red' }}>
-                {prices[coin].usd_24h_change.toFixed(2)}%
-              </td>
+
+      <input
+        type="text"
+        placeholder="Search coin (e.g., bitcoin, solana, dogecoin)..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-bar"
+      />
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <table className="crypto-table">
+          <thead>
+            <tr>
+              <th>Coin</th>
+              <th>Price (USD)</th>
+              <th>24h Change</th>
+              <th>7d Change</th>
+              <th>Market Cap</th>
+              <th>Volume (24h)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredCoins.map((coin) => (
+              <tr key={coin.id}>
+                <td>
+                  <img
+                    src={coin.image}
+                    alt={coin.name}
+                    width="20"
+                    style={{ marginRight: "8px", verticalAlign: "middle" }}
+                  />
+                  {coin.name.toUpperCase()}
+                </td>
+                <td>${coin.current_price?.toLocaleString()}</td>
+                <td>{renderChange(coin.price_change_percentage_24h)}</td>
+                <td>{renderChange(coin.price_change_percentage_7d_in_currency)}</td>
+                <td>${coin.market_cap?.toLocaleString() || "—"}</td>
+                <td>${coin.total_volume?.toLocaleString() || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
-  )
+  );
 }
 
-export default Dashboard
+export default Dashboard;

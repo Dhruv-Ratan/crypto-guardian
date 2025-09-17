@@ -1,44 +1,54 @@
 .sentiment-container {
     font-family: 'Segoe UI', sans-serif;
     min-height: 100vh;
-    background: var(--bg-color);
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding: 40px;
-    color: var(--text-color);
+    background: var(--bg, #f4f6f9);
+    color: var(--text, #222);
+    box-sizing: border-box;
 }
 
 .sentiment-card {
-    background: var(--card-bg);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 600px;
-    color: var(--text-color);
-    border: 1px solid var(--card-border);
+    max-width: 1100px;
+    margin: 0 auto;
+    transition: all 0.3s ease-in-out;
+}
+
+.sentiment-card:hover {
+    transform: translateY(-3px);
 }
 
 .sentiment-card h2 {
     margin-bottom: 15px;
-    color: var(--text-color);
+    color: #007bff;
+    font-weight: bold;
+    text-align: center;
 }
 
 .sentiment-textarea {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid var(--card-border);
+    border: 1px solid #ccc;
     outline: none;
     font-size: 15px;
     margin-bottom: 12px;
     resize: none;
-    background: var(--card-bg);
-    color: var(--text-color);
+    background: #fff;
+    color: #111;
 }
 
 .sentiment-button {
+    display: block;
+    margin: 0 auto;
     padding: 10px 18px;
     border: none;
     border-radius: 8px;
@@ -49,58 +59,93 @@
     transition: background 0.2s ease-in-out;
 }
 
-.sentiment-button:hover {
+.sentiment-button:hover:not(:disabled) {
     background: #0056b3;
 }
 
+.sentiment-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spinner {
+    margin: 10px auto;
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 .sentiment-result {
-    margin-top: 20px;
+    margin-top: 25px;
     padding: 20px;
-    border-radius: 10px;
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    background: #fafafa;
+    border: 1px solid #eee;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    color: var(--text-color);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
 .sentiment-result h3 {
+    grid-column: 1 / -1;
+    text-align: center;
     margin-bottom: 10px;
-    color: var(--text-color);
     font-weight: bold;
-}
-
-.sentiment-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
+    color: #333;
 }
 
 .sentiment-positive {
     background: #d4edda;
     color: #155724;
-    border: 1px solid #c3e6cb;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
 .sentiment-negative {
     background: #f8d7da;
     color: #721c24;
-    border: 1px solid #f5c6cb;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
 .sentiment-neutral {
     background: #e2e3e5;
     color: #383d41;
-    border: 1px solid #d6d8db;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
 .positive {
     color: #008000;
+    background: #d4edda;
+    padding: 2px 4px;
+    border-radius: 4px;
     font-weight: bold;
 }
 
 .negative {
     color: #cc0000;
+    background: #f8d7da;
+    padding: 2px 4px;
+    border-radius: 4px;
     font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .sentiment-result {
+        grid-template-columns: 1fr;
+    }
 }

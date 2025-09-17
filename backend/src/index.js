@@ -1,19 +1,25 @@
 require('dotenv').config()
 const express = require('express')
 const bodyParser = require('body-parser')
+const cors = require('cors')
 
 const app = express()
 app.use(bodyParser.json())
+app.use(cors())
 
 const sentimentRoutes = require('./routes/sentiment')
 const cryptoRoutes = require('./routes/crypto')
+const coingeckoRoutes = require('./routes/coingecko')
+
+app.use('/api/sentiment', sentimentRoutes)
+app.use('/api/crypto', cryptoRoutes)
+app.use('/api/coingecko', coingeckoRoutes)
 
 app.get('/api/hello', (req, res) => {
   res.json({ msg: 'Backend is alive!' })
 })
 
-app.use('/api/sentiment', sentimentRoutes)
-app.use('/api/crypto', cryptoRoutes)
-
 const PORT = process.env.PORT || 4000
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`⚡ Backend running on http://localhost:${PORT}`)
+})
