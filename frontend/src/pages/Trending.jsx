@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Trending.css";
 
@@ -31,7 +32,11 @@ function Trending() {
           {trending.map((item, idx) => {
             const coin = item.item;
             return (
-              <div key={coin.id} className="trending-card">
+              <Link
+                to={`/coin/${coin.id}`}
+                key={coin.id}
+                className="trending-card"
+              >
                 <span className="trend-rank">#{idx + 1}</span>
                 <img src={coin.small} alt={coin.name} width="30" />
                 <div>
@@ -40,7 +45,7 @@ function Trending() {
                   </p>
                   <p className="coin-rank">Rank #{coin.market_cap_rank}</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

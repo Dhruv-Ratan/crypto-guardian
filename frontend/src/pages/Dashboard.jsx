@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
+import { Link } from "react-router-dom";
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import "./Dashboard.css";
 
 function Dashboard() {
@@ -70,14 +78,9 @@ function Dashboard() {
           </thead>
           <tbody>
             {filteredCoins.map((coin) => (
-              <tr key={coin.id}>
+              <tr key={coin.id} style={{ cursor: "pointer" }}>
                 <td>
-                  <a
-                    href={`https://www.coingecko.com/en/coins/${coin.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="coin-link"
-                  >
+                  <Link to={`/coin/${coin.id}`} className="coin-link">
                     <img
                       src={coin.image}
                       alt={coin.name}
@@ -85,7 +88,7 @@ function Dashboard() {
                       style={{ marginRight: "8px", verticalAlign: "middle" }}
                     />
                     {coin.name.toUpperCase()} ({coin.symbol.toUpperCase()})
-                  </a>
+                  </Link>
                 </td>
                 <td>${coin.current_price?.toLocaleString() || "—"}</td>
                 <td>{renderChange(coin.price_change_percentage_24h)}</td>
@@ -94,15 +97,55 @@ function Dashboard() {
                 </td>
                 <td>${coin.market_cap?.toLocaleString() || "—"}</td>
                 <td>${coin.total_volume?.toLocaleString() || "—"}</td>
-                <td style={{ width: "120px", height: "40px" }}>
+                <td style={{ width: "140px", height: "50px" }}>
                   {coin.sparkline_in_7d ? (
-                    <ResponsiveContainer width="100%" height={40}>
-                      <AreaChart
+                    <ResponsiveContainer width="100%" height={50}>
+                      <LineChart
                         data={coin.sparkline_in_7d.price.map((p, i) => ({
                           price: p,
                           idx: i,
                         }))}
                       >
+                        {/* Gradient definitions */}
+                        <defs>
+                          <linearGradient
+                            id="positiveGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#16c784"
+                              stopOpacity={1}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#16c784"
+                              stopOpacity={0.2}
+                            />
+                          </linearGradient>
+                          <linearGradient
+                            id="negativeGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#ea3943"
+                              stopOpacity={1}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#ea3943"
+                              stopOpacity={0.2}
+                            />
+                          </linearGradient>
+                        </defs>
+
                         <Tooltip
                           formatter={(value) => [
                             `$${value.toFixed(2)}`,
@@ -117,22 +160,20 @@ function Dashboard() {
                           }}
                           cursor={{ stroke: "#ccc", strokeWidth: 1 }}
                         />
-                        <Area
+                        <Line
                           type="monotone"
                           dataKey="price"
-                          stroke={
+                          stroke={`url(#${
                             coin.price_change_percentage_7d_in_currency >= 0
-                              ? "#16c784"
-                              : "#ea3943"
-                          }
-                          fill={
-                            coin.price_change_percentage_7d_in_currency >= 0
-                              ? "#16c78433"
-                              : "#ea394333"
-                          }
-                          strokeWidth={2}
+                              ? "positiveGradient"
+                              : "negativeGradient"
+                          })`}
+                          strokeWidth={2.5}
+                          dot={false}
                         />
-                      </AreaChart>
+                        <XAxis hide />
+                        <YAxis hide domain={["auto", "auto"]} />
+                      </LineChart>
                     </ResponsiveContainer>
                   ) : (
                     "—"
