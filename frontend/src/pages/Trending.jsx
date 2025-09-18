@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import "./Trending.css";
 
 function Trending() {
@@ -10,7 +10,7 @@ function Trending() {
   const fetchTrending = async () => {
     try {
       const res = await axios.get("/api/coingecko/trending");
-      setTrending(res.data.coins || []);
+      setTrending(res.data.coins);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching trending coins:", err);
@@ -29,25 +29,29 @@ function Trending() {
         <p>Loading...</p>
       ) : (
         <div className="trending-grid">
-          {trending.map((item, idx) => {
-            const coin = item.item;
-            return (
-              <Link
-                to={`/coin/${coin.id}`}
-                key={coin.id}
-                className="trending-card"
-              >
-                <span className="trend-rank">#{idx + 1}</span>
-                <img src={coin.small} alt={coin.name} width="30" />
-                <div>
-                  <p className="coin-name">
-                    {coin.name} ({coin.symbol.toUpperCase()})
-                  </p>
-                  <p className="coin-rank">Rank #{coin.market_cap_rank}</p>
-                </div>
-              </Link>
-            );
-          })}
+          {trending.map((coin, index) => (
+            <Link
+              key={coin.item.id}
+              to={`/coin/${coin.item.id}`}
+              className="trending-card"
+            >
+              <span className="trend-rank">#{index + 1}</span>
+              <img
+                src={coin.item.small}
+                alt={coin.item.name}
+                width="32"
+                height="32"
+              />
+              <div>
+                <p className="coin-name">
+                  {coin.item.name} ({coin.item.symbol.toUpperCase()})
+                </p>
+                <p className="coin-rank">
+                  Market Cap Rank: #{coin.item.market_cap_rank}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>

@@ -1,7 +1,14 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import "./CoinDetails.css";
 
 function CoinDetails() {
@@ -64,12 +71,24 @@ function CoinDetails() {
 
       <h3>📈 7-Day Price Trend</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <AreaChart
+        <LineChart
           data={coin.market_data.sparkline_7d.price.map((p, i) => ({
             price: p,
             idx: i,
           }))}
         >
+          {/* Gradient definitions */}
+          <defs>
+            <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#16c784" stopOpacity={1} />
+              <stop offset="100%" stopColor="#16c784" stopOpacity={0.2} />
+            </linearGradient>
+            <linearGradient id="negativeGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ea3943" stopOpacity={1} />
+              <stop offset="100%" stopColor="#ea3943" stopOpacity={0.2} />
+            </linearGradient>
+          </defs>
+
           <Tooltip
             formatter={(value) => [`$${value.toFixed(2)}`, "Price"]}
             contentStyle={{
@@ -79,23 +98,24 @@ function CoinDetails() {
               color: "#fff",
               fontSize: "12px",
             }}
+            cursor={{ stroke: "#ccc", strokeWidth: 1 }}
           />
-          <Area
+
+          <Line
             type="monotone"
             dataKey="price"
-            stroke={
+            stroke={`url(#${
               coin.market_data.price_change_percentage_7d >= 0
-                ? "#16c784"
-                : "#ea3943"
-            }
-            fill={
-              coin.market_data.price_change_percentage_7d >= 0
-                ? "#16c78433"
-                : "#ea394333"
-            }
-            strokeWidth={2}
+                ? "positiveGradient"
+                : "negativeGradient"
+            })`}
+            strokeWidth={2.5}
+            dot={false}
           />
-        </AreaChart>
+
+          <XAxis hide />
+          <YAxis hide domain={["auto", "auto"]} />
+        </LineChart>
       </ResponsiveContainer>
 
       <div className="coin-description">
