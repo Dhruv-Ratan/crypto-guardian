@@ -1,35 +1,16 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  email TEXT UNIQUE,
-  created_at TIMESTAMP DEFAULT now()
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE wallets (
+CREATE TABLE IF NOT EXISTS portfolio (
   id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id),
-  address TEXT UNIQUE,
-  chain TEXT,
-  created_at TIMESTAMP DEFAULT now()
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  coin_id VARCHAR(50) NOT NULL,
+  amount NUMERIC(20,8) NOT NULL,
+  buy_price NUMERIC(20,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
 );
-
-CREATE TABLE tokens (
-  id SERIAL PRIMARY KEY,
-  symbol TEXT,
-  name TEXT,
-  contract_address TEXT,
-  chain TEXT
-);
-
-CREATE TABLE transactions (
-  id SERIAL PRIMARY KEY,
-  wallet_id INT REFERENCES wallets(id),
-  token_id INT REFERENCES tokens(id),
-  tx_hash TEXT UNIQUE,
-  amount NUMERIC,
-  price_at_tx NUMERIC,
-  side TEXT,
-  timestamp TIMESTAMP,
-  created_at TIMESTAMP DEFAULT now()
-);
-
-CREATE INDEX idx_transactions_wallet ON transactions(wallet_id);

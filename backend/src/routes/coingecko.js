@@ -55,4 +55,23 @@ router.get("/coin/:id", async (req, res) => {
   }
 });
 
+router.get("/price", async (req, res) => {
+  try {
+    const { ids, vs_currency } = req.query;
+    const response = await axios.get(
+      "https://api.coingecko.com/api/v3/simple/price",
+      {
+        params: {
+          ids,
+          vs_currencies: vs_currency || "usd",
+        },
+      }
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error("Error fetching prices:", err.message);
+    res.status(500).json({ error: "Failed to fetch prices" });
+  }
+});
+
 module.exports = router;
