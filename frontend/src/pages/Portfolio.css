@@ -1,0 +1,149 @@
+.portfolio-container {
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    color: var(--text-color, #222);
+}
+
+.portfolio-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+}
+
+.portfolio-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.portfolio-form input,
+.portfolio-form button {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+.portfolio-form input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.portfolio-form button {
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    border: none;
+    transition: background 0.3s ease;
+}
+
+.portfolio-form button:hover {
+    background: #0056b3;
+}
+
+.autocomplete {
+    position: relative;
+    flex: 1 1 200px;
+}
+
+.suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-color, #fff);
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.suggestions-list li {
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.suggestions-list li:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.portfolio-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.portfolio-table th,
+.portfolio-table td {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+.portfolio-table th {
+    background: var(--table-header, #f8f9fa);
+    font-weight: bold;
+}
+
+.summary-row {
+    font-weight: bold;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.delete-btn {
+    padding: 0.4rem 0.8rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.delete-btn:hover {
+    background: #a71d2a;
+}
+
+.positive-change {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.negative-change {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.neutral-change {
+    color: #6c757d;
+    font-weight: bold;
+}
+
+body.dark .portfolio-container {
+    color: #f1f1f1;
+}
+
+body.dark .portfolio-form input,
+body.dark .portfolio-form button,
+body.dark .portfolio-table th,
+body.dark .portfolio-table td,
+body.dark .suggestions-list {
+    background: #1e1e1e;
+    color: #f1f1f1;
+    border-color: #444;
+}
+
+body.dark .portfolio-table th {
+    background: #2a2a2a;
+}

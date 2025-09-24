@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Footer from "./components/Footer";
 import Trending from "./pages/Trending";
 import CoinDetails from "./pages/CoinDetails";
+import Portfolio from "./pages/Portfolio";
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -16,7 +17,8 @@ function Navbar() {
       <Link to="/">Home</Link>
       <Link to="/sentiment">Sentiment Analyzer</Link>
       <Link to="/dashboard">Dashboard</Link>
-      <Link to="/trending">Trending</Link> {/* 👈 added link */}
+      <Link to="/trending">Trending</Link>
+      <Link to="/portfolio">Portfolio</Link>
       <button onClick={toggleTheme} className="theme-toggle">
         {theme === "light" ? "🌙 Dark" : "☀️ Light"}
       </button>
@@ -35,6 +37,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/coin/:id" element={<CoinDetails />} />
+          <Route path="/portfolio" element={<Portfolio />} />
         </Routes>
         <Footer />
       </Router>
