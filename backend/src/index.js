@@ -10,10 +10,12 @@ app.use(cors())
 const sentimentRoutes = require('./routes/sentiment')
 const cryptoRoutes = require('./routes/crypto')
 const coingeckoRoutes = require('./routes/coingecko')
+const portfolioRoutes = require("./routes/portfolio");
 
 app.use('/api/sentiment', sentimentRoutes)
 app.use('/api/crypto', cryptoRoutes)
 app.use('/api/coingecko', coingeckoRoutes)
+app.use("/api/portfolio", portfolioRoutes);
 
 app.get('/api/hello', (req, res) => {
   res.json({ msg: 'Backend is alive!' })

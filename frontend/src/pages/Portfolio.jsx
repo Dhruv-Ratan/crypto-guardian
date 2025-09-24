@@ -1,344 +1,283 @@
 import React, { useEffect, useState } from "react";
-import api from "../api/axios"; // ✅ use axios wrapper with JWT interceptor
+import axios from "axios";
+import Select from "react-select";
 import "./Portfolio.css";
 
 function Portfolio() {
   const [holdings, setHoldings] = useState([]);
-  const [coinId, setCoinId] = useState("");
+  const [coinId, setCoinId] = useState(null);
   const [amount, setAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
   const [loading, setLoading] = useState(false);
-  const [prices, setPrices] = useState({});
-  const [allCoins, setAllCoins] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [fetching, setFetching] = useState(true);
-  const [pricesLoading, setPricesLoading] = useState(false);
+  const [coins, setCoins] = useState([]);
 
-  // 🔹 Fetch portfolio (requires JWT)
-  const fetchPortfolio = async () => {
-    try {
-      setFetching(true);
-      const res = await api.get("/api/portfolio");
-      setHoldings(res.data);
-    } catch (err) {
-      console.error("Error fetching portfolio:", err);
-    } finally {
-      setFetching(false);
-    }
-  };
-
-  // 🔹 Fetch live prices
-  const fetchPrices = async () => {
-    if (holdings.length === 0) return;
-    try {
-      setPricesLoading(true);
-      const ids = holdings.map((h) => h.coin_id).join(",");
-      const res = await api.get(
-        `/api/coingecko/price?ids=${ids}&vs_currency=usd`
-      );
-      setPrices(res.data);
-    } catch (err) {
-      console.error("Error fetching live prices:", err);
-    } finally {
-      setPricesLoading(false);
-    }
-  };
-
-  // 🔹 Fetch coin list (for autocomplete)
-  const fetchCoinList = async () => {
-    try {
-      const res = await api.get("/api/coingecko/coins/list");
-      setAllCoins(res.data);
-    } catch (err) {
-      console.error("Error fetching coin list:", err);
-    }
-  };
-
+  // ✅ Fetch coins (with prices)
   useEffect(() => {
-    fetchPortfolio();
-    fetchCoinList();
+    const fetchCoins = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:4000/api/coingecko/coins"
+        );
+        const formatted = res.data.map((coin) => ({
+          value: coin.id,
+          label: coin.name,
+          image: coin.image,
+          current_price: coin.current_price,
+        }));
+        setCoins(formatted);
+      } catch (err) {
+        console.error("Error fetching coins:", err);
+      }
+    };
+    fetchCoins();
   }, []);
 
+  // ✅ Fetch holdings
+  const fetchHoldings = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/api/portfolio");
+      setHoldings(res.data);
+    } catch (err) {
+      console.error("Error fetching holdings:", err);
+    }
+  };
+
   useEffect(() => {
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holdings.length]);
+    fetchHoldings();
+  }, []);
 
-  // 🔹 Handle coin input with suggestions
-  let searchTimeout;
-  const handleCoinChange = (e) => {
-    const value = e.target.value;
-    setCoinId(value);
-
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      if (value.length > 0) {
-        const filtered = allCoins
-          .filter(
-            (c) =>
-              c.id.toLowerCase().includes(value.toLowerCase()) ||
-              c.symbol.toLowerCase().includes(value.toLowerCase())
-          )
-          .slice(0, 6);
-        setSuggestions(filtered);
-      } else {
-        setSuggestions([]);
-      }
-    }, 300);
-  };
-
-  const selectSuggestion = (coin) => {
-    setCoinId(coin.id);
-    setSuggestions([]);
-  };
-
-  // 🔹 Add holding
-  const addHolding = async (e) => {
+  // ✅ Add holding
+  const handleAddHolding = async (e) => {
     e.preventDefault();
+
     if (!coinId || !amount || !buyPrice) {
       alert("Please fill all fields");
       return;
     }
-    if (parseFloat(amount) <= 0 || parseFloat(buyPrice) <= 0) {
-      alert("Amount and Buy Price must be greater than 0");
-      return;
-    }
 
+    setLoading(true);
     try {
-      setLoading(true);
-      await api.post("/api/portfolio/add", {
-        coin_id: coinId.toLowerCase(),
+      await axios.post("http://localhost:4000/api/portfolio", {
+        coin_id: coinId.value,
         amount: parseFloat(amount),
         buy_price: parseFloat(buyPrice),
       });
-      setCoinId("");
+      setCoinId(null);
       setAmount("");
       setBuyPrice("");
-      fetchPortfolio();
+      fetchHoldings();
     } catch (err) {
       console.error("Error adding holding:", err);
-      alert("Failed to add holding");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Delete holding
-  const deleteHolding = async (id) => {
-    try {
-      await api.delete(`/api/portfolio/${id}`);
-      fetchPortfolio();
-    } catch (err) {
-      console.error("Error deleting holding:", err);
-    }
-  };
-
-  // 🔹 Summary calculations
+  // ✅ Calculate Portfolio Summary
   const summary = holdings.reduce(
     (acc, h) => {
-      const livePrice = prices[h.coin_id]?.usd || 0;
-      const invested = Number(h.amount) * Number(h.buy_price);
-      const currentValue = Number(h.amount) * livePrice;
-      acc.invested += invested;
-      acc.currentValue += currentValue;
+      const coin = coins.find((c) => c.value === h.coin_id);
+      const totalValue = parseFloat(h.amount) * parseFloat(h.buy_price);
+      const currentValue = coin ? parseFloat(h.amount) * coin.current_price : 0;
+
+      acc.investment += totalValue;
+      acc.current += currentValue;
       return acc;
     },
-    { invested: 0, currentValue: 0 }
+    { investment: 0, current: 0 }
   );
-  summary.profitLoss = summary.currentValue - summary.invested;
-  summary.profitLossPercent =
-    summary.invested > 0 ? (summary.profitLoss / summary.invested) * 100 : 0;
+
+  const netPL = summary.current - summary.investment;
+  const netPLPercent =
+    summary.investment > 0 ? (netPL / summary.investment) * 100 : 0;
 
   return (
     <div className="portfolio-container">
-      <h2>💼 My Portfolio</h2>
+      <h2>My Portfolio</h2>
 
-      {/* Add Holding Form */}
-      <form className="portfolio-form" onSubmit={addHolding}>
-        <div className="autocomplete">
-          <input
-            type="text"
-            placeholder="Search coin (e.g., bitcoin)"
-            value={coinId}
-            onChange={handleCoinChange}
-          />
-          {suggestions.length > 0 && (
-            <ul className="suggestions-list">
-              {suggestions.map((coin) => (
-                <li key={coin.id} onClick={() => selectSuggestion(coin)}>
-                  {coin.name} ({coin.symbol.toUpperCase()})
-                </li>
-              ))}
-            </ul>
-          )}
+      {/* ✅ Portfolio Summary */}
+      {holdings.length > 0 && (
+        <div className="portfolio-summary">
+          <div>
+            <h4>Total Investment</h4>
+            <p>
+              $
+              {summary.investment.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </p>
+          </div>
+          <div>
+            <h4>Current Value</h4>
+            <p>
+              $
+              {summary.current.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </p>
+          </div>
+          <div>
+            <h4>Net P/L</h4>
+            <p
+              style={{
+                color: netPL >= 0 ? "limegreen" : "red",
+                fontWeight: "bold",
+              }}
+            >
+              {netPL >= 0 ? "+" : ""}
+              {netPL.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              ({netPLPercent.toFixed(2)}%)
+            </p>
+          </div>
         </div>
+      )}
+
+      {/* ✅ Add Holding Form */}
+      <form onSubmit={handleAddHolding} className="portfolio-form">
+        <Select
+          options={coins}
+          value={coinId}
+          onChange={setCoinId}
+          placeholder="🔍 Search & Select Coin"
+          isSearchable
+          formatOptionLabel={(coin) => (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <img
+                src={coin.image}
+                alt={coin.label}
+                style={{ width: 20, height: 20, borderRadius: "50%" }}
+              />
+              <span>{coin.label}</span>
+            </div>
+          )}
+          styles={{
+            control: (base) => ({
+              ...base,
+              backgroundColor: "#1e1e1e",
+              borderColor: "#444",
+              color: "#fff",
+              boxShadow: "none",
+              "&:hover": { borderColor: "#888" },
+            }),
+            singleValue: (base) => ({ ...base, color: "#fff" }),
+            input: (base) => ({ ...base, color: "#fff" }),
+            menu: (base) => ({ ...base, backgroundColor: "#2a2a2a" }),
+            option: (base, { isFocused, isSelected }) => ({
+              ...base,
+              backgroundColor: isSelected
+                ? "#3a3a3a"
+                : isFocused
+                ? "#333"
+                : "#2a2a2a",
+              color: "#fff",
+              cursor: "pointer",
+            }),
+            placeholder: (base) => ({ ...base, color: "#aaa" }),
+          }}
+        />
+
         <input
           type="number"
+          step="0.0001"
           placeholder="Amount"
           value={amount}
-          min="0"
-          step="any"
           onChange={(e) => setAmount(e.target.value)}
+          required
         />
+
         <input
           type="number"
+          step="0.01"
           placeholder="Buy Price (USD)"
           value={buyPrice}
-          min="0"
-          step="any"
           onChange={(e) => setBuyPrice(e.target.value)}
+          required
         />
+
         <button type="submit" disabled={loading}>
           {loading ? "Adding..." : "Add Holding"}
         </button>
       </form>
 
-      {/* Portfolio Table */}
-      {fetching ? (
-        <p>⏳ Loading portfolio...</p>
-      ) : holdings.length > 0 ? (
-        <div className="table-wrapper">
-          <table className="portfolio-table">
+      {/* ✅ Holdings List */}
+      <div className="portfolio-list">
+        {holdings.length === 0 ? (
+          <p>No holdings yet.</p>
+        ) : (
+          <table className="holdings-table">
             <thead>
               <tr>
                 <th>Coin</th>
                 <th>Amount</th>
                 <th>Buy Price</th>
-                <th>Invested ($)</th>
-                <th>Current Price</th>
-                <th>Current Value</th>
-                <th>P/L ($)</th>
-                <th>P/L %</th>
-                <th>Actions</th>
+                <th>Total Value</th>
+                <th>Profit/Loss</th>
               </tr>
             </thead>
             <tbody>
               {holdings.map((h) => {
-                const livePrice = prices[h.coin_id]?.usd || 0;
-                const invested = Number(h.amount) * Number(h.buy_price);
-                const currentValue = Number(h.amount) * livePrice;
-                const profitLoss = currentValue - invested;
+                const coin = coins.find((c) => c.value === h.coin_id);
+                const totalValue =
+                  parseFloat(h.amount) * parseFloat(h.buy_price);
+                const currentValue = coin
+                  ? parseFloat(h.amount) * coin.current_price
+                  : 0;
+                const profitLoss = currentValue - totalValue;
                 const profitLossPercent =
-                  invested > 0 ? (profitLoss / invested) * 100 : 0;
-                const coinMeta = allCoins.find((c) => c.id === h.coin_id);
+                  ((currentValue - totalValue) / totalValue) * 100;
 
                 return (
                   <tr key={h.id}>
-                    <td>
-                      {coinMeta?.name || h.coin_id} (
-                      {coinMeta?.symbol?.toUpperCase() || "N/A"})
+                    <td
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {coin?.image && (
+                        <img
+                          src={coin.image}
+                          alt={coin.label}
+                          style={{ width: 24, height: 24, borderRadius: "50%" }}
+                        />
+                      )}
+                      <span>{coin?.label || h.coin_id}</span>
                     </td>
-                    <td>{h.amount}</td>
-                    <td>${Number(h.buy_price).toFixed(2)}</td>
+                    <td>{parseFloat(h.amount).toLocaleString()}</td>
+                    <td>${parseFloat(h.buy_price).toFixed(2)}</td>
                     <td>
                       $
-                      {invested.toLocaleString(undefined, {
+                      {totalValue.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td>
-                      {pricesLoading
-                        ? "⏳"
-                        : livePrice
-                        ? `$${livePrice.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                        : "—"}
-                    </td>
-                    <td>
-                      {currentValue
-                        ? `$${currentValue.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                        : "—"}
-                    </td>
                     <td
-                      className={
-                        profitLoss > 0
-                          ? "positive-change"
-                          : profitLoss < 0
-                          ? "negative-change"
-                          : "neutral-change"
-                      }
+                      style={{
+                        color: profitLoss >= 0 ? "limegreen" : "red",
+                        fontWeight: "bold",
+                      }}
                     >
-                      ${profitLoss.toFixed(2)}
-                    </td>
-                    <td
-                      className={
-                        profitLossPercent > 0
-                          ? "positive-change"
-                          : profitLossPercent < 0
-                          ? "negative-change"
-                          : "neutral-change"
-                      }
-                    >
-                      {profitLossPercent.toFixed(2)}%
-                    </td>
-                    <td>
-                      <button
-                        className="delete-btn"
-                        onClick={() => deleteHolding(h.id)}
-                      >
-                        ❌ Delete
-                      </button>
+                      {profitLoss >= 0 ? "+" : ""}
+                      {profitLoss.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      ({profitLossPercent.toFixed(2)}%)
                     </td>
                   </tr>
                 );
               })}
             </tbody>
-            <tfoot>
-              <tr className="summary-row">
-                <td colSpan="3">TOTAL</td>
-                <td>
-                  $
-                  {summary.invested.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td>—</td>
-                <td>
-                  $
-                  {summary.currentValue.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td
-                  className={
-                    summary.profitLoss > 0
-                      ? "positive-change"
-                      : summary.profitLoss < 0
-                      ? "negative-change"
-                      : "neutral-change"
-                  }
-                >
-                  ${summary.profitLoss.toFixed(2)}
-                </td>
-                <td
-                  className={
-                    summary.profitLossPercent > 0
-                      ? "positive-change"
-                      : summary.profitLossPercent < 0
-                      ? "negative-change"
-                      : "neutral-change"
-                  }
-                >
-                  {summary.profitLossPercent.toFixed(2)}%
-                </td>
-                <td>—</td>
-              </tr>
-            </tfoot>
           </table>
-        </div>
-      ) : (
-        <p>No holdings yet. Add one above 👆</p>
-      )}
+        )}
+      </div>
     </div>
   );
 }
