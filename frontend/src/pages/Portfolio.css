@@ -1,200 +1,90 @@
 .portfolio-container {
-    padding: 2rem;
-    max-width: 1100px;
-    margin: 0 auto;
-    color: var(--text-color, #222);
-}
-
-.portfolio-container h2 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 2rem;
+    padding: 30px;
+    color: var(--text-color);
 }
 
 .portfolio-form {
     display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
-    gap: 0.8rem;
-    justify-content: center;
-    margin-bottom: 2rem;
 }
 
 .portfolio-form input,
 .portfolio-form button {
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
     font-size: 1rem;
+}
+
+.portfolio-form input {
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--card-border);
 }
 
 .portfolio-form input:focus {
     outline: none;
-    border-color: #007bff;
+    border: 1px solid var(--primary-color);
 }
 
 .portfolio-form button {
-    background: #007bff;
-    color: white;
+    background: var(--primary-color);
+    color: #fff;
     cursor: pointer;
-    border: none;
-    transition: background 0.3s ease;
+    transition: 0.2s;
 }
 
 .portfolio-form button:hover {
-    background: #0056b3;
-}
-
-.autocomplete {
-    position: relative;
-    flex: 1 1 200px;
-}
-
-.suggestions-list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--bg-color, #fff);
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 10;
-}
-
-.suggestions-list li {
-    padding: 0.5rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.suggestions-list li:hover {
-    background: rgba(0, 123, 255, 0.1);
-}
-
-.table-wrapper {
-    overflow-x: auto;
-}
-
-.portfolio-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-}
-
-.portfolio-table th,
-.portfolio-table td {
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    text-align: center;
-    font-size: 0.95rem;
-}
-
-.portfolio-table th {
-    background: var(--table-header, #f8f9fa);
-    font-weight: bold;
-}
-
-.summary-row {
-    font-weight: bold;
-    background: rgba(0, 123, 255, 0.05);
-}
-
-.delete-btn {
-    padding: 0.4rem 0.8rem;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.3s ease;
-}
-
-.delete-btn:hover {
-    background: #a71d2a;
-}
-
-.positive-change {
-    color: #28a745;
-    font-weight: bold;
-}
-
-.negative-change {
-    color: #dc3545;
-    font-weight: bold;
-}
-
-.neutral-change {
-    color: #6c757d;
-    font-weight: bold;
-}
-
-body.dark .portfolio-container {
-    color: #f1f1f1;
-}
-
-body.dark .portfolio-form input,
-body.dark .portfolio-form button,
-body.dark .portfolio-table th,
-body.dark .portfolio-table td,
-body.dark .suggestions-list {
-    background: #1e1e1e;
-    color: #f1f1f1;
-    border-color: #444;
-}
-
-body.dark .portfolio-table th {
-    background: #2a2a2a;
+    background: var(--primary-hover);
 }
 
 .holdings-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    background: #1e1e1e;
+    background: var(--card-bg);
     border-radius: 10px;
     overflow: hidden;
+    border: 1px solid var(--card-border);
 }
 
 .holdings-table th,
 .holdings-table td {
     padding: 12px 15px;
     text-align: left;
-    color: #fff;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--card-border);
 }
 
 .holdings-table thead {
-    background: #2a2a2a;
-}
-
-.holdings-table tr:nth-child(even) {
-    background: #242424;
+    background: var(--primary-color);
+    color: #fff;
 }
 
 .holdings-table tr:hover {
-    background: #333;
-    transition: 0.2s;
+    background: rgba(0, 123, 255, 0.05);
 }
 
 .portfolio-summary {
     display: flex;
     justify-content: space-around;
-    background: #1e1e1e;
+    background: var(--card-bg);
     padding: 20px;
     border-radius: 10px;
     margin: 20px 0;
+    border: 1px solid var(--card-border);
     text-align: center;
 }
 
 .portfolio-summary h4 {
     margin: 0;
-    color: #aaa;
+    color: var(--text-color);
 }
 
 .portfolio-summary p {
     margin: 5px 0 0;
     font-size: 1.2rem;
-    color: #fff;
     font-weight: bold;
 }

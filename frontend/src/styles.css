@@ -33,40 +33,78 @@ body {
 
 .navbar {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 15px;
-    padding: 12px 20px;
-    background: var(--navbar-bg);
-    color: var(--navbar-text);
+    background: #1e1e1e;
+    padding: 12px 25px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-left {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 .navbar a {
-    color: var(--navbar-text);
+    color: #fff;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
 }
 
 .navbar a:hover {
-    text-decoration: underline;
+    background: #2a2a2a;
+    color: #4cafef;
+}
+
+.auth-btn,
+.auth-link {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.auth-btn {
+    background: #e53935;
+    border: none;
+    color: white;
+}
+
+.auth-btn:hover {
+    background: #c62828;
+}
+
+.auth-link {
+    background: #4cafef;
+    color: white;
+}
+
+.auth-link:hover {
+    background: #2196f3;
 }
 
 .theme-toggle {
-    margin-left: auto;
     padding: 6px 12px;
-    border: none;
     border-radius: 6px;
-    background: var(--button-bg);
-    color: var(--button-text);
+    border: none;
+    background: #333;
+    color: #fff;
     cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s, color 0.3s;
 }
 
-.card {
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    padding: 20px;
+.theme-toggle:hover {
+    background: #444;
 }

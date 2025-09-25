@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import Select from "react-select";
 import "./Portfolio.css";
+import { AuthContext } from "../context/AuthContext";
 
 function Portfolio() {
   const [holdings, setHoldings] = useState([]);
@@ -10,8 +11,8 @@ function Portfolio() {
   const [buyPrice, setBuyPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [coins, setCoins] = useState([]);
+  const { token } = useContext(AuthContext);
 
-  // ✅ Fetch coins (with prices)
   useEffect(() => {
     const fetchCoins = async () => {
       try {
@@ -32,10 +33,11 @@ function Portfolio() {
     fetchCoins();
   }, []);
 
-  // ✅ Fetch holdings
   const fetchHoldings = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/portfolio");
+      const res = await axios.get("http://localhost:4000/api/portfolio", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setHoldings(res.data);
     } catch (err) {
       console.error("Error fetching holdings:", err);
@@ -43,25 +45,29 @@ function Portfolio() {
   };
 
   useEffect(() => {
-    fetchHoldings();
-  }, []);
+    if (token) fetchHoldings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  // ✅ Add holding
   const handleAddHolding = async (e) => {
     e.preventDefault();
-
     if (!coinId || !amount || !buyPrice) {
       alert("Please fill all fields");
       return;
     }
-
     setLoading(true);
     try {
-      await axios.post("http://localhost:4000/api/portfolio", {
-        coin_id: coinId.value,
-        amount: parseFloat(amount),
-        buy_price: parseFloat(buyPrice),
-      });
+      await axios.post(
+        "http://localhost:4000/api/portfolio",
+        {
+          coin_id: coinId.value,
+          amount: parseFloat(amount),
+          buy_price: parseFloat(buyPrice),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setCoinId(null);
       setAmount("");
       setBuyPrice("");
@@ -73,13 +79,11 @@ function Portfolio() {
     }
   };
 
-  // ✅ Calculate Portfolio Summary
   const summary = holdings.reduce(
     (acc, h) => {
       const coin = coins.find((c) => c.value === h.coin_id);
       const totalValue = parseFloat(h.amount) * parseFloat(h.buy_price);
       const currentValue = coin ? parseFloat(h.amount) * coin.current_price : 0;
-
       acc.investment += totalValue;
       acc.current += currentValue;
       return acc;
@@ -94,8 +98,6 @@ function Portfolio() {
   return (
     <div className="portfolio-container">
       <h2>My Portfolio</h2>
-
-      {/* ✅ Portfolio Summary */}
       {holdings.length > 0 && (
         <div className="portfolio-summary">
           <div>
@@ -136,8 +138,6 @@ function Portfolio() {
           </div>
         </div>
       )}
-
-      {/* ✅ Add Holding Form */}
       <form onSubmit={handleAddHolding} className="portfolio-form">
         <Select
           options={coins}
@@ -180,7 +180,6 @@ function Portfolio() {
             placeholder: (base) => ({ ...base, color: "#aaa" }),
           }}
         />
-
         <input
           type="number"
           step="0.0001"
@@ -189,7 +188,6 @@ function Portfolio() {
           onChange={(e) => setAmount(e.target.value)}
           required
         />
-
         <input
           type="number"
           step="0.01"
@@ -198,13 +196,10 @@ function Portfolio() {
           onChange={(e) => setBuyPrice(e.target.value)}
           required
         />
-
         <button type="submit" disabled={loading}>
           {loading ? "Adding..." : "Add Holding"}
         </button>
       </form>
-
-      {/* ✅ Holdings List */}
       <div className="portfolio-list">
         {holdings.length === 0 ? (
           <p>No holdings yet.</p>
@@ -230,7 +225,6 @@ function Portfolio() {
                 const profitLoss = currentValue - totalValue;
                 const profitLossPercent =
                   ((currentValue - totalValue) / totalValue) * 100;
-
                 return (
                   <tr key={h.id}>
                     <td

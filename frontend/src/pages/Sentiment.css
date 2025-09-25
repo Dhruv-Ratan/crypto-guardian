@@ -6,16 +6,16 @@
     justify-content: center;
     align-items: flex-start;
     padding: 40px;
-    background: var(--bg, #f4f6f9);
-    color: var(--text, #222);
+    background: var(--bg-color);
+    color: var(--text-color);
     box-sizing: border-box;
 }
 
 .sentiment-card {
-    background: #fff;
+    background: var(--card-bg);
     padding: 30px;
     border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
@@ -28,7 +28,7 @@
 
 .sentiment-card h2 {
     margin-bottom: 15px;
-    color: #007bff;
+    color: var(--primary-color);
     font-weight: bold;
     text-align: center;
 }
@@ -37,13 +37,17 @@
     width: 100%;
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--card-border);
     outline: none;
     font-size: 15px;
     margin-bottom: 12px;
     resize: none;
-    background: #fff;
-    color: #111;
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+.sentiment-textarea:focus {
+    border: 1px solid var(--primary-color);
 }
 
 .sentiment-button {
@@ -52,7 +56,7 @@
     padding: 10px 18px;
     border: none;
     border-radius: 8px;
-    background: #007bff;
+    background: var(--primary-color);
     color: #fff;
     font-weight: bold;
     cursor: pointer;
@@ -60,7 +64,7 @@
 }
 
 .sentiment-button:hover:not(:disabled) {
-    background: #0056b3;
+    background: var(--primary-hover);
 }
 
 .sentiment-button:disabled {
@@ -72,8 +76,8 @@
     margin: 10px auto;
     width: 28px;
     height: 28px;
-    border: 3px solid #ddd;
-    border-top: 3px solid #007bff;
+    border: 3px solid var(--card-border);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -88,9 +92,9 @@
     margin-top: 25px;
     padding: 20px;
     border-radius: 12px;
-    background: #fafafa;
-    border: 1px solid #eee;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
@@ -101,12 +105,12 @@
     text-align: center;
     margin-bottom: 10px;
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
 }
 
 .sentiment-positive {
     background: #d4edda;
-    color: #155724;
+    color: var(--positive);
     padding: 4px 10px;
     border-radius: 8px;
     font-weight: bold;
@@ -114,7 +118,7 @@
 
 .sentiment-negative {
     background: #f8d7da;
-    color: #721c24;
+    color: var(--negative);
     padding: 4px 10px;
     border-radius: 8px;
     font-weight: bold;
@@ -122,14 +126,14 @@
 
 .sentiment-neutral {
     background: #e2e3e5;
-    color: #383d41;
+    color: #555;
     padding: 4px 10px;
     border-radius: 8px;
     font-weight: bold;
 }
 
 .positive {
-    color: #008000;
+    color: var(--positive);
     background: #d4edda;
     padding: 2px 4px;
     border-radius: 4px;
@@ -137,7 +141,7 @@
 }
 
 .negative {
-    color: #cc0000;
+    color: var(--negative);
     background: #f8d7da;
     padding: 2px 4px;
     border-radius: 4px;

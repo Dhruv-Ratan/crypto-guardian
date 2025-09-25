@@ -6,10 +6,11 @@
     background: var(--bg-color);
     color: var(--text-color);
     border-radius: 12px;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 .dashboard-container h2 {
-    color: #007bff;
+    color: var(--primary-color);
     font-size: 24px;
     margin-bottom: 20px;
     font-weight: bold;
@@ -27,11 +28,13 @@
     border-radius: 8px;
     font-size: 14px;
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, background 0.3s ease, color 0.3s ease;
+    background: var(--card-bg);
+    color: var(--text-color);
 }
 
 .search-bar:focus {
-    border-color: #007bff;
+    border-color: var(--primary-color);
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
@@ -44,6 +47,7 @@
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--card-border);
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 .crypto-table th,
@@ -55,7 +59,7 @@
 }
 
 .crypto-table th {
-    background: #007bff;
+    background: var(--primary-color);
     color: #fff;
 }
 
@@ -64,14 +68,15 @@
 }
 
 .positive-change {
-    color: #16c784;
+    color: var(--positive);
     font-weight: bold;
 }
 
 .negative-change {
-    color: #ea3943;
+    color: var(--negative);
     font-weight: bold;
 }
+
 @media (max-width: 768px) {
     .dashboard-container {
         padding: 15px;
@@ -95,10 +100,11 @@
     text-decoration: none;
     color: inherit;
     font-weight: bold;
+    transition: color 0.2s ease;
 }
 
 .coin-link:hover {
-    color: #007bff;
+    color: var(--primary-color);
     text-decoration: underline;
     cursor: pointer;
 }

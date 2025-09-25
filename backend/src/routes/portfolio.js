@@ -1,11 +1,15 @@
 const express = require("express");
-const pool = require("../db"); // make sure you have db.js with pg Pool
+const pool = require("../db");
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-// Get all holdings
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware, async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM portfolio ORDER BY id DESC");
+        const result = await pool.query(
+            "SELECT * FROM portfolio WHERE user_id=$1 ORDER BY id DESC",
+            [req.user.id]
+        );
         res.json(result.rows);
     } catch (err) {
         console.error(err.message);
@@ -13,20 +17,13 @@ router.get("/", async (req, res) => {
     }
 });
 
-// Add a holding
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
     try {
         const { coin_id, amount, buy_price } = req.body;
-
-        if (!coin_id || !amount || !buy_price) {
-            return res.status(400).json({ error: "Missing fields" });
-        }
-
         const result = await pool.query(
-            "INSERT INTO portfolio (coin_id, amount, buy_price) VALUES ($1, $2, $3) RETURNING *",
-            [coin_id, amount, buy_price]
+            "INSERT INTO portfolio (coin_id, amount, buy_price, user_id) VALUES ($1, $2, $3, $4) RETURNING *",
+            [coin_id, amount, buy_price, req.user.id]
         );
-
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err.message);

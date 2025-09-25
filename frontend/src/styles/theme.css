@@ -1,0 +1,35 @@
+body.dark {
+    --bg-color: #121212;
+    --text-color: #ffffff;
+    --card-bg: #1e1e1e;
+    --card-border: #333;
+
+    --primary-color: #4cafef;
+    --primary-hover: #2196f3;
+    --accent-color: #ff5722;
+
+    --heading-color: #4cafef;
+    --button-bg: #4cafef;
+    --button-hover: #2196f3;
+
+    --positive: #16c784;
+    --negative: #ea3943;
+}
+
+body.light {
+    --bg-color: #ffffff;
+    --text-color: #111111;
+    --card-bg: #f9f9f9;
+    --card-border: #dddddd;
+
+    --primary-color: #1976d2;
+    --primary-hover: #1565c0;
+    --accent-color: #ff5722;
+
+    --heading-color: #1976d2;
+    --button-bg: #1976d2;
+    --button-hover: #1565c0;
+
+    --positive: #16c784;
+    --negative: #ea3943;
+}

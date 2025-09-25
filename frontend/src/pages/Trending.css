@@ -7,11 +7,12 @@
   color: var(--text-color);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .trending-container h2 {
   margin-bottom: 20px;
-  color: #ff5722;
+  color: var(--accent-color);
   font-size: 24px;
   font-weight: bold;
   display: flex;
@@ -41,14 +42,14 @@
 
 .trending-card:hover {
   transform: translateY(-4px);
-  border-color: #007bff;
+  border-color: var(--primary-color);
   box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
 }
 
 .trend-rank {
   font-weight: bold;
   font-size: 14px;
-  color: #ff5722;
+  color: var(--accent-color);
   min-width: 30px;
   text-align: center;
 }
@@ -71,7 +72,6 @@
   margin: 2px 0 0;
 }
 
-/* Responsive tweak */
 @media (max-width: 600px) {
   .trending-card {
     padding: 12px;
