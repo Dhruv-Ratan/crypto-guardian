@@ -1,16 +1,22 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+require("dotenv").config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function authMiddleware(req, res, next) {
-    const token = req.headers["authorization"]?.split(" ")[1]; // "Bearer <token>"
+    const token = req.headers["authorization"]?.split(" ")[1];
 
     if (!token) return res.status(401).json({ error: "No token provided" });
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
+        req.userId = decoded.id;
         next();
     } catch (err) {
+        if (err.name === "TokenExpiredError") {
+            return res.status(401).json({ error: "Token expired, please login again" });
+        }
+        console.error("JWT verification failed:", err.message);
         return res.status(401).json({ error: "Invalid token" });
     }
 }

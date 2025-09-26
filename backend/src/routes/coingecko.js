@@ -1,8 +1,14 @@
 const express = require("express");
 const axios = require("axios");
-const router = express.Router();
+const NodeCache = require("node-cache");
 
+const router = express.Router();
+const cache = new NodeCache({ stdTTL: 60 });
 router.get("/top", async (req, res) => {
+  const cacheKey = `top_${req.query.vs_currency || "usd"}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
     const vs_currency = req.query.vs_currency || "usd";
 
@@ -20,42 +26,54 @@ router.get("/top", async (req, res) => {
       }
     );
 
+    cache.set(cacheKey, response.data);
     res.json(response.data);
   } catch (err) {
     console.error("Error fetching market data:", err.message);
-    res.status(500).json({ error: "Failed to fetch market data" });
+    res.status(err.response?.status || 500).json({ error: "Failed to fetch market data" });
   }
 });
 
 router.get("/trending", async (req, res) => {
+  const cacheKey = "trending";
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
-    const response = await axios.get(
-      "https://api.coingecko.com/api/v3/search/trending"
-    );
+    const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
+    cache.set(cacheKey, response.data);
     res.json(response.data);
   } catch (err) {
     console.error("Error fetching trending coins:", err.message);
-    res.status(500).json({ error: "Failed to fetch trending coins" });
+    res.status(err.response?.status || 500).json({ error: "Failed to fetch trending coins" });
   }
 });
 
 router.get("/coin/:id", async (req, res) => {
+  const { id } = req.params;
+  const cacheKey = `coin_${id}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
-    const { id } = req.params;
     const response = await axios.get(
       `https://api.coingecko.com/api/v3/coins/${id}`,
-      {
-        params: { localization: false, sparkline: true },
-      }
+      { params: { localization: false, sparkline: true } }
     );
+
+    cache.set(cacheKey, response.data);
     res.json(response.data);
   } catch (err) {
     console.error("Error fetching coin details:", err.message);
-    res.status(500).json({ error: "Failed to fetch coin details" });
+    res.status(err.response?.status || 500).json({ error: "Failed to fetch coin details" });
   }
 });
 
 router.get("/coins", async (req, res) => {
+  const cacheKey = "coins_list";
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
     const response = await axios.get(
       "https://api.coingecko.com/api/v3/coins/markets",
@@ -75,13 +93,14 @@ router.get("/coins", async (req, res) => {
       name: coin.name,
       symbol: coin.symbol,
       image: coin.image,
-      current_price: coin.current_price, // ✅ include price
+      current_price: coin.current_price,
     }));
 
+    cache.set(cacheKey, coins);
     res.json(coins);
-  } catch (error) {
-    console.error("Error fetching coins:", error.message);
-    res.status(500).json({ error: "Failed to fetch coins" });
+  } catch (err) {
+    console.error("Error fetching coins:", err.message);
+    res.status(err.response?.status || 500).json({ error: "Failed to fetch coins" });
   }
 });
 

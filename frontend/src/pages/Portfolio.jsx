@@ -35,9 +35,12 @@ function Portfolio() {
 
   const fetchHoldings = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/portfolio", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        "http://localhost:4000/api/portfolio/holdings",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setHoldings(res.data);
     } catch (err) {
       console.error("Error fetching holdings:", err);
@@ -58,11 +61,11 @@ function Portfolio() {
     setLoading(true);
     try {
       await axios.post(
-        "http://localhost:4000/api/portfolio",
+        "http://localhost:4000/api/portfolio/holdings",
         {
-          coin_id: coinId.value,
+          coinId: coinId.value,
           amount: parseFloat(amount),
-          buy_price: parseFloat(buyPrice),
+          buyPrice: parseFloat(buyPrice),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -76,6 +79,17 @@ function Portfolio() {
       console.error("Error adding holding:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteHolding = async (id) => {
+    try {
+      await axios.delete(`http://localhost:4000/api/portfolio/holdings/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchHoldings();
+    } catch (err) {
+      console.error("Error deleting holding:", err);
     }
   };
 
@@ -212,6 +226,7 @@ function Portfolio() {
                 <th>Buy Price</th>
                 <th>Total Value</th>
                 <th>Profit/Loss</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -264,6 +279,21 @@ function Portfolio() {
                         maximumFractionDigits: 2,
                       })}{" "}
                       ({profitLossPercent.toFixed(2)}%)
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleDeleteHolding(h.id)}
+                        style={{
+                          background: "red",
+                          color: "white",
+                          border: "none",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 );

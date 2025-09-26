@@ -4,30 +4,76 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.get("/", authMiddleware, async (req, res) => {
+router.post("/holdings", authMiddleware, async (req, res) => {
     try {
+        const { coinId, amount, buyPrice } = req.body;
+        console.log("DEBUG body:", req.body);
+        console.log("DEBUG userId:", req.userId);
+
         const result = await pool.query(
-            "SELECT * FROM portfolio WHERE user_id=$1 ORDER BY id DESC",
-            [req.user.id]
+            "INSERT INTO holdings (user_id, coin_id, amount, buy_price) VALUES ($1, $2, $3, $4) RETURNING *",
+            [req.userId, coinId, amount, buyPrice]
         );
-        res.json(result.rows);
+
+        console.log("DEBUG inserted:", result.rows[0]);
+        res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        console.error("DEBUG error adding holding:", err.message);
+        res.status(500).json({ error: "Failed to add holding" });
     }
 });
 
-router.post("/", authMiddleware, async (req, res) => {
+router.get("/holdings", authMiddleware, async (req, res) => {
     try {
-        const { coin_id, amount, buy_price } = req.body;
+        const userId = req.userId;
+        const result = await pool.query("SELECT * FROM holdings WHERE user_id=$1", [userId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Error fetching holdings:", err.message);
+        res.status(500).json({ error: "Failed to fetch holdings" });
+    }
+});
+
+router.delete("/holdings/:id", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { id } = req.params;
+
         const result = await pool.query(
-            "INSERT INTO portfolio (coin_id, amount, buy_price, user_id) VALUES ($1, $2, $3, $4) RETURNING *",
-            [coin_id, amount, buy_price, req.user.id]
+            "DELETE FROM holdings WHERE id=$1 AND user_id=$2 RETURNING *",
+            [id, userId]
         );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Holding not found or not authorized" });
+        }
+
+        res.json({ message: "Holding deleted", holding: result.rows[0] });
+    } catch (err) {
+        console.error("Error deleting holding:", err.message);
+        res.status(500).json({ error: "Failed to delete holding" });
+    }
+});
+
+router.put("/holdings/:id", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { id } = req.params;
+        const { amount, buyPrice } = req.body;
+
+        const result = await pool.query(
+            "UPDATE holdings SET amount=$1, buy_price=$2 WHERE id=$3 AND user_id=$4 RETURNING *",
+            [amount, buyPrice, id, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Holding not found or not authorized" });
+        }
+
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        console.error("Error updating holding:", err.message);
+        res.status(500).json({ error: "Failed to update holding" });
     }
 });
 
