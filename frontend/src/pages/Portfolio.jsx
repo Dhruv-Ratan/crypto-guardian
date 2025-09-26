@@ -13,12 +13,12 @@ function Portfolio() {
   const [coins, setCoins] = useState([]);
   const { token } = useContext(AuthContext);
 
+  const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+
   useEffect(() => {
     const fetchCoins = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:4000/api/coingecko/coins"
-        );
+        const res = await axios.get(`${base}/api/coingecko/coins`);
         const formatted = res.data.map((coin) => ({
           value: coin.id,
           label: coin.name,
@@ -31,16 +31,13 @@ function Portfolio() {
       }
     };
     fetchCoins();
-  }, []);
+  }, [base]);
 
   const fetchHoldings = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:4000/api/portfolio/holdings",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await axios.get(`${base}/api/portfolio/holdings/enriched`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setHoldings(res.data);
     } catch (err) {
       console.error("Error fetching holdings:", err);
@@ -61,7 +58,7 @@ function Portfolio() {
     setLoading(true);
     try {
       await axios.post(
-        "http://localhost:4000/api/portfolio/holdings",
+        `${base}/api/portfolio/holdings`,
         {
           coinId: coinId.value,
           amount: parseFloat(amount),
@@ -84,7 +81,7 @@ function Portfolio() {
 
   const handleDeleteHolding = async (id) => {
     try {
-      await axios.delete(`http://localhost:4000/api/portfolio/holdings/${id}`, {
+      await axios.delete(`${base}/api/portfolio/holdings/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchHoldings();
@@ -95,11 +92,8 @@ function Portfolio() {
 
   const summary = holdings.reduce(
     (acc, h) => {
-      const coin = coins.find((c) => c.value === h.coin_id);
-      const totalValue = parseFloat(h.amount) * parseFloat(h.buy_price);
-      const currentValue = coin ? parseFloat(h.amount) * coin.current_price : 0;
-      acc.investment += totalValue;
-      acc.current += currentValue;
+      acc.investment += h.invested || 0;
+      acc.current += h.current_value || 0;
       return acc;
     },
     { investment: 0, current: 0 }
@@ -112,6 +106,7 @@ function Portfolio() {
   return (
     <div className="portfolio-container">
       <h2>My Portfolio</h2>
+
       {holdings.length > 0 && (
         <div className="portfolio-summary">
           <div>
@@ -152,6 +147,7 @@ function Portfolio() {
           </div>
         </div>
       )}
+
       <form onSubmit={handleAddHolding} className="portfolio-form">
         <Select
           options={coins}
@@ -180,18 +176,29 @@ function Portfolio() {
             }),
             singleValue: (base) => ({ ...base, color: "#fff" }),
             input: (base) => ({ ...base, color: "#fff" }),
-            menu: (base) => ({ ...base, backgroundColor: "#2a2a2a" }),
+            menu: (base) => ({
+              ...base,
+              backgroundColor: "#1e1e1e",
+              border: "1px solid #333",
+            }),
             option: (base, { isFocused, isSelected }) => ({
               ...base,
               backgroundColor: isSelected
-                ? "#3a3a3a"
-                : isFocused
                 ? "#333"
-                : "#2a2a2a",
+                : isFocused
+                ? "#2a2a2a"
+                : "#1e1e1e",
               color: "#fff",
               cursor: "pointer",
             }),
             placeholder: (base) => ({ ...base, color: "#aaa" }),
+            dropdownIndicator: (base) => ({
+              ...base,
+              color: "#aaa",
+              "&:hover": { color: "#fff" },
+            }),
+            indicatorSeparator: () => ({ display: "none" }),
+            valueContainer: (base) => ({ ...base, color: "#fff" }),
           }}
         />
         <input
@@ -214,6 +221,7 @@ function Portfolio() {
           {loading ? "Adding..." : "Add Holding"}
         </button>
       </form>
+
       <div className="portfolio-list">
         {holdings.length === 0 ? (
           <p>No holdings yet.</p>
@@ -224,80 +232,94 @@ function Portfolio() {
                 <th>Coin</th>
                 <th>Amount</th>
                 <th>Buy Price</th>
-                <th>Total Value</th>
+                <th>Invested</th>
+                <th>Current Price</th>
+                <th>Current Value</th>
                 <th>Profit/Loss</th>
+                <th>P/L %</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {holdings.map((h) => {
-                const coin = coins.find((c) => c.value === h.coin_id);
-                const totalValue =
-                  parseFloat(h.amount) * parseFloat(h.buy_price);
-                const currentValue = coin
-                  ? parseFloat(h.amount) * coin.current_price
-                  : 0;
-                const profitLoss = currentValue - totalValue;
-                const profitLossPercent =
-                  ((currentValue - totalValue) / totalValue) * 100;
-                return (
-                  <tr key={h.id}>
-                    <td
+              {holdings.map((h) => (
+                <tr key={h.id}>
+                  <td
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    {h.image && (
+                      <img
+                        src={h.image}
+                        alt={h.coin_name}
+                        style={{ width: 24, height: 24, borderRadius: "50%" }}
+                      />
+                    )}
+                    <span>{h.coin_name}</span> ({h.symbol?.toUpperCase()})
+                  </td>
+                  <td>{Number(h.amount).toLocaleString()}</td>
+                  <td>
+                    {h.buy_price !== null && h.buy_price !== undefined
+                      ? `$${Number(h.buy_price).toFixed(2)}`
+                      : "-"}
+                  </td>
+                  <td>
+                    {h.invested !== null && h.invested !== undefined
+                      ? `$${Number(h.invested).toFixed(2)}`
+                      : "-"}
+                  </td>
+                  <td>
+                    {h.current_price !== null && h.current_price !== undefined
+                      ? `$${Number(h.current_price).toFixed(2)}`
+                      : "-"}
+                  </td>
+                  <td>
+                    {h.current_value !== null && h.current_value !== undefined
+                      ? `$${Number(h.current_value).toFixed(2)}`
+                      : "-"}
+                  </td>
+                  <td
+                    style={{
+                      color: h.profit_loss > 0 ? "limegreen" : "red",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {h.profit_loss !== null && h.profit_loss !== undefined
+                      ? `${h.profit_loss >= 0 ? "+" : ""}$${Number(
+                          h.profit_loss
+                        ).toFixed(2)}`
+                      : "-"}
+                  </td>
+                  <td
+                    style={{
+                      color: h.profit_loss_percent > 0 ? "limegreen" : "red",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {h.profit_loss_percent !== null &&
+                    h.profit_loss_percent !== undefined
+                      ? `${Number(h.profit_loss_percent).toFixed(2)}%`
+                      : "-"}
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => handleDeleteHolding(h.id)}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
+                        background: "red",
+                        color: "white",
+                        border: "none",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
                       }}
                     >
-                      {coin?.image && (
-                        <img
-                          src={coin.image}
-                          alt={coin.label}
-                          style={{ width: 24, height: 24, borderRadius: "50%" }}
-                        />
-                      )}
-                      <span>{coin?.label || h.coin_id}</span>
-                    </td>
-                    <td>{parseFloat(h.amount).toLocaleString()}</td>
-                    <td>${parseFloat(h.buy_price).toFixed(2)}</td>
-                    <td>
-                      $
-                      {totalValue.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td
-                      style={{
-                        color: profitLoss >= 0 ? "limegreen" : "red",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {profitLoss >= 0 ? "+" : ""}
-                      {profitLoss.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      ({profitLossPercent.toFixed(2)}%)
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleDeleteHolding(h.id)}
-                        style={{
-                          background: "red",
-                          color: "white",
-                          border: "none",
-                          padding: "6px 10px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

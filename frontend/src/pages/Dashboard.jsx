@@ -106,7 +106,6 @@ function Dashboard() {
                           idx: i,
                         }))}
                       >
-                        {/* Gradient definitions */}
                         <defs>
                           <linearGradient
                             id="positiveGradient"
