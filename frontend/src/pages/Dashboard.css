@@ -108,3 +108,72 @@
     text-decoration: underline;
     cursor: pointer;
 }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    padding: 15px;
+    border-radius: 10px;
+    background: #f5f5f5;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-card h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.stat-card p {
+    margin: 5px 0 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+body.dark .stat-card {
+    background: #1e1e1e;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.05);
+}
+
+body.dark .stat-card h4 {
+    color: #aaa;
+}
+
+.watchlist-toggle {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #aaa;
+    transition: color 0.2s;
+}
+
+.watchlist-toggle.active {
+    color: gold;
+}
+
+.watchlist-toggle:hover {
+    color: gold;
+}
+
+.dashboard-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.watchlist-filter {
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}

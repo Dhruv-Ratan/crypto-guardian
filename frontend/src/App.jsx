@@ -18,6 +18,9 @@ import CoinDetails from "./pages/CoinDetails";
 import Portfolio from "./pages/Portfolio";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Alerts from "./pages/Alerts";
+import Watchlist from "./pages/Watchlist";
+import { WatchlistProvider } from "./context/WatchlistContext";
 import "./styles.css";
 
 function Navbar() {
@@ -39,6 +42,8 @@ function Navbar() {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/trending">Trending</Link>
         {token && <Link to="/portfolio">Portfolio</Link>}
+        {token && <Link to="/alerts">Alerts</Link>}
+        {token && <Link to="/watchlist">Watchlist</Link>}
       </div>
 
       <div className="nav-right">
@@ -76,27 +81,38 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Router>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/sentiment" element={<Sentiment />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/trending" element={<Trending />} />
-            <Route path="/coin/:id" element={<CoinDetails />} />
-            <Route
-              path="/portfolio"
-              element={
-                <RequireAuth>
-                  <Portfolio />
-                </RequireAuth>
-              }
-            />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Routes>
-          <Footer />
-        </Router>
+        <WatchlistProvider>
+          <Router>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/sentiment" element={<Sentiment />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/trending" element={<Trending />} />
+              <Route path="/coin/:id" element={<CoinDetails />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+              <Route
+                path="/portfolio"
+                element={
+                  <RequireAuth>
+                    <Portfolio />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/alerts"
+                element={
+                  <RequireAuth>
+                    <Alerts />
+                  </RequireAuth>
+                }
+              />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+            </Routes>
+            <Footer />
+          </Router>
+        </WatchlistProvider>
       </ThemeProvider>
     </AuthProvider>
   );

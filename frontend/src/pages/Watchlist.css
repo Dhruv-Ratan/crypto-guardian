@@ -1,0 +1,100 @@
+.watchlist-container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.watchlist-container h2 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+.watchlist-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.watchlist-table th,
+.watchlist-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.watchlist-table th {
+    background: #f5f5f5;
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.watchlist-table td {
+    background: #fff;
+    font-size: 0.9rem;
+}
+
+.watchlist-table tr:hover td {
+    background: #f0f0f0;
+}
+
+.coin-link {
+    text-decoration: none;
+    font-weight: bold;
+    color: #333;
+}
+
+.coin-link:hover {
+    text-decoration: underline;
+}
+
+.remove-btn {
+    background: #e53935;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.remove-btn:hover {
+    background: #c62828;
+}
+
+.positive-change {
+    color: #16c784;
+    font-weight: bold;
+}
+
+.negative-change {
+    color: #ea3943;
+    font-weight: bold;
+}
+
+body.dark .watchlist-table th {
+    background: #222;
+    color: #ddd;
+}
+
+body.dark .watchlist-table td {
+    background: #1e1e1e;
+    color: #fff;
+    border-color: #333;
+}
+
+body.dark .watchlist-table tr:hover td {
+    background: #2a2a2a;
+}
+
+body.dark .coin-link {
+    color: #fff;
+}
+
+body.dark .remove-btn {
+    background: #d32f2f;
+}
+
+body.dark .remove-btn:hover {
+    background: #b71c1c;
+}

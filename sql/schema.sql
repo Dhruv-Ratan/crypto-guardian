@@ -33,3 +33,13 @@ CREATE TABLE transactions (
 );
 
 CREATE INDEX idx_transactions_wallet ON transactions(wallet_id);
+
+CREATE TABLE alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    coin_id VARCHAR(100) NOT NULL,
+    target_price NUMERIC NOT NULL,
+    direction VARCHAR(10) NOT NULL CHECK (direction IN ('above', 'below')),
+    triggered BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
+);

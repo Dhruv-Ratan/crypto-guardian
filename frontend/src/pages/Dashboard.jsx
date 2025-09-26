@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import {
@@ -9,12 +9,21 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { AuthContext } from "../context/AuthContext";
+import { WatchlistContext } from "../context/WatchlistContext";
 import "./Dashboard.css";
 
 function Dashboard() {
   const [coins, setCoins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [globalData, setGlobalData] = useState(null);
+
+  const { token } = useContext(AuthContext);
+  const { watchlist, addToWatchlist, removeFromWatchlist, fetchWatchlist } =
+    useContext(WatchlistContext);
+
+  const [showWatchlistOnly, setShowWatchlistOnly] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -26,17 +35,48 @@ function Dashboard() {
     }
   };
 
+  const fetchGlobalData = async () => {
+    try {
+      const res = await axios.get("https://api.coingecko.com/api/v3/global");
+      setGlobalData(res.data.data);
+    } catch (err) {
+      console.error("Error fetching global market data:", err);
+    }
+  };
+
+  const toggleWatchlist = (coin_id) => {
+    if (!token) {
+      alert("Please login to manage your watchlist.");
+      return;
+    }
+    if (watchlist.includes(coin_id)) {
+      removeFromWatchlist(coin_id);
+    } else {
+      addToWatchlist(coin_id);
+    }
+  };
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    fetchGlobalData();
+    fetchWatchlist();
+    const interval = setInterval(() => {
+      fetchData();
+      fetchGlobalData();
+    }, 15000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredCoins = coins.filter(
-    (coin) =>
+  const filteredCoins = coins.filter((coin) => {
+    const matchesSearch =
       coin.name.toLowerCase().includes(search.toLowerCase()) ||
-      coin.symbol.toLowerCase().includes(search.toLowerCase())
-  );
+      coin.symbol.toLowerCase().includes(search.toLowerCase());
+    const matchesWatchlist = showWatchlistOnly
+      ? watchlist.includes(coin.id)
+      : true;
+    return matchesSearch && matchesWatchlist;
+  });
 
   const renderChange = (value) => {
     if (value == null) return "—";
@@ -53,13 +93,46 @@ function Dashboard() {
     <div className="dashboard-container">
       <h2>📊 Crypto Dashboard</h2>
 
-      <input
-        type="text"
-        placeholder="Search coin..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="search-bar"
-      />
+      {globalData && (
+        <div className="stats-grid">
+          <div className="stat-card">
+            <h4>Global Market Cap</h4>
+            <p>${globalData.total_market_cap.usd.toLocaleString()}</p>
+          </div>
+          <div className="stat-card">
+            <h4>24h Volume</h4>
+            <p>${globalData.total_volume.usd.toLocaleString()}</p>
+          </div>
+          <div className="stat-card">
+            <h4>BTC Dominance</h4>
+            <p>{globalData.market_cap_percentage.btc.toFixed(2)}%</p>
+          </div>
+          <div className="stat-card">
+            <h4>Active Cryptos</h4>
+            <p>{globalData.active_cryptocurrencies}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="dashboard-filters">
+        <input
+          type="text"
+          placeholder="Search coin..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="search-bar"
+        />
+        {token && (
+          <label className="watchlist-filter">
+            <input
+              type="checkbox"
+              checked={showWatchlistOnly}
+              onChange={(e) => setShowWatchlistOnly(e.target.checked)}
+            />
+            Show Watchlist Only
+          </label>
+        )}
+      </div>
 
       {loading ? (
         <p>Loading...</p>
@@ -67,6 +140,7 @@ function Dashboard() {
         <table className="crypto-table">
           <thead>
             <tr>
+              <th>⭐</th>
               <th>Coin</th>
               <th>Price (USD)</th>
               <th>24h Change</th>
@@ -79,6 +153,16 @@ function Dashboard() {
           <tbody>
             {filteredCoins.map((coin) => (
               <tr key={coin.id} style={{ cursor: "pointer" }}>
+                <td>
+                  <button
+                    className={`watchlist-toggle ${
+                      watchlist.includes(coin.id) ? "active" : ""
+                    }`}
+                    onClick={() => toggleWatchlist(coin.id)}
+                  >
+                    {watchlist.includes(coin.id) ? "★" : "☆"}
+                  </button>
+                </td>
                 <td>
                   <Link to={`/coin/${coin.id}`} className="coin-link">
                     <img
