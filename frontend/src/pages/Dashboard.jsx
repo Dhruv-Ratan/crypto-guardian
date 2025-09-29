@@ -27,7 +27,7 @@ function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get("/api/coingecko/top?vs_currency=usd");
+      const res = await axios.get("http://localhost:4000/api/market-data");
       setCoins(res.data);
       setLoading(false);
     } catch (err) {

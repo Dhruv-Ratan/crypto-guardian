@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
@@ -33,12 +32,27 @@ function CoinDetails() {
   const [timeframe, setTimeframe] = useState("30");
   const [watchlistMsg, setWatchlistMsg] = useState("");
 
+  const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+
   const fetchCoinData = async () => {
     try {
-      const res = await axios.get(
-        `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`
-      );
-      setCoin(res.data);
+      const marketRes = await axios.get(`${base}/api/market-data?ids=${id}`);
+      const marketCoin = marketRes.data[0] || null;
+
+      const detailRes = await axios.get(`${base}/api/coin/${id}`);
+
+      setCoin({
+        ...detailRes.data,
+        market_data: detailRes.data.market_data || {
+          current_price: { usd: marketCoin?.current_price },
+          market_cap: { usd: marketCoin?.market_cap },
+          price_change_percentage_24h: marketCoin?.price_change_percentage_24h,
+          total_volume: { usd: marketCoin?.total_volume },
+        },
+        image: detailRes.data.image || { large: marketCoin?.image },
+        symbol: detailRes.data.symbol || marketCoin?.symbol,
+        name: detailRes.data.name || marketCoin?.name,
+      });
     } catch (err) {
       console.error("Error fetching coin details:", err.message);
     }
@@ -47,9 +61,10 @@ function CoinDetails() {
   const fetchHistoricalData = async (days) => {
     try {
       setLoading(true);
-      const res = await axios.get(
-        `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`
-      );
+      const res = await axios.get(`${base}/api/coin/${id}/market-chart`, {
+        params: { days },
+      });
+
       const prices = res.data.prices.map((p) => ({
         x: new Date(p[0]).toLocaleDateString(),
         y: p[1],
@@ -93,8 +108,8 @@ function CoinDetails() {
       return;
     }
     try {
-      const res = await axios.post(
-        "http://localhost:4000/api/watchlist",
+      await axios.post(
+        `${base}/api/watchlist`,
         { coin_id: id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -124,7 +139,7 @@ function CoinDetails() {
           <img src={coin.image.large} alt={coin.name} width={80} />
           <p
             dangerouslySetInnerHTML={{
-              __html: coin.description.en.split(".")[0],
+              __html: coin.description?.en?.split(".")[0] || "",
             }}
           ></p>
 

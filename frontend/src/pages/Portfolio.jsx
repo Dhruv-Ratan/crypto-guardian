@@ -60,7 +60,7 @@ function Portfolio() {
       await axios.post(
         `${base}/api/portfolio/holdings`,
         {
-          coinId: coinId.value,
+          coinId: coinId.value.trim().toLowerCase(), // ✅ Always save CoinGecko ID
           amount: parseFloat(amount),
           buyPrice: parseFloat(buyPrice),
         },
@@ -165,41 +165,6 @@ function Portfolio() {
               <span>{coin.label}</span>
             </div>
           )}
-          styles={{
-            control: (base) => ({
-              ...base,
-              backgroundColor: "#1e1e1e",
-              borderColor: "#444",
-              color: "#fff",
-              boxShadow: "none",
-              "&:hover": { borderColor: "#888" },
-            }),
-            singleValue: (base) => ({ ...base, color: "#fff" }),
-            input: (base) => ({ ...base, color: "#fff" }),
-            menu: (base) => ({
-              ...base,
-              backgroundColor: "#1e1e1e",
-              border: "1px solid #333",
-            }),
-            option: (base, { isFocused, isSelected }) => ({
-              ...base,
-              backgroundColor: isSelected
-                ? "#333"
-                : isFocused
-                ? "#2a2a2a"
-                : "#1e1e1e",
-              color: "#fff",
-              cursor: "pointer",
-            }),
-            placeholder: (base) => ({ ...base, color: "#aaa" }),
-            dropdownIndicator: (base) => ({
-              ...base,
-              color: "#aaa",
-              "&:hover": { color: "#fff" },
-            }),
-            indicatorSeparator: () => ({ display: "none" }),
-            valueContainer: (base) => ({ ...base, color: "#fff" }),
-          }}
         />
         <input
           type="number"

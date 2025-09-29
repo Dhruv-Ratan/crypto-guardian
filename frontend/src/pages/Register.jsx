@@ -5,34 +5,32 @@ import { AuthContext } from "../context/AuthContext";
 import "./auth.css";
 
 function Register() {
-  const { setUser, setToken } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
   });
+  const [error, setError] = useState("");
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError("");
     try {
-      await axios.post("http://localhost:4000/api/auth/register", formData);
-      const loginRes = await axios.post(
-        "http://localhost:4000/api/auth/login",
-        {
-          email: formData.email,
-          password: formData.password,
-        }
+      const res = await axios.post(
+        "http://localhost:4000/api/auth/register",
+        formData
       );
-      setUser(loginRes.data.user);
-      setToken(loginRes.data.token);
+      login(res.data.user, res.data.token);
       navigate("/portfolio");
-      // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("Registration failed");
+      setError(
+        err.response?.data?.error || "Registration failed. Please try again."
+      );
     }
   };
 
@@ -64,6 +62,7 @@ function Register() {
         required
       />
       <button type="submit">Register</button>
+      {error && <p className="error">{error}</p>}
       <p>
         Already have an account? <Link to="/login">Login</Link>
       </p>

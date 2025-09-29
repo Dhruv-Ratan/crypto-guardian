@@ -52,4 +52,31 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     }
 });
 
+router.put("/:id", authMiddleware, async (req, res) => {
+    try {
+        const { price } = req.body;
+        const { id } = req.params;
+
+        if (!price || isNaN(price)) {
+            return res.status(400).json({ error: "Valid price is required" });
+        }
+
+        const result = await pool.query(
+            "UPDATE alerts SET target_price=$1 WHERE id=$2 AND user_id=$3 RETURNING *",
+            [price, id, req.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res
+                .status(404)
+                .json({ error: "Alert not found or unauthorized" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update alert" });
+    }
+});
+
 module.exports = router;

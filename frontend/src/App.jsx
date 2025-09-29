@@ -25,12 +25,11 @@ import "./styles.css";
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { setUser, setToken, token } = useContext(AuthContext);
+  const { token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    setUser(null);
-    setToken("");
+    logout();
     navigate("/login");
   };
 
@@ -90,7 +89,6 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/trending" element={<Trending />} />
               <Route path="/coin/:id" element={<CoinDetails />} />
-              <Route path="/watchlist" element={<Watchlist />} />
               <Route
                 path="/portfolio"
                 element={
@@ -104,6 +102,14 @@ function App() {
                 element={
                   <RequireAuth>
                     <Alerts />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/watchlist"
+                element={
+                  <RequireAuth>
+                    <Watchlist />
                   </RequireAuth>
                 }
               />

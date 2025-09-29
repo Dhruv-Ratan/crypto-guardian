@@ -17,6 +17,8 @@ function Alerts() {
   const [direction, setDirection] = useState("above");
   const [loading, setLoading] = useState(false);
   const prevAlertsRef = useRef([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editPrice, setEditPrice] = useState("");
 
   const loadCoinOptions = async (inputValue) => {
     if (!inputValue || inputValue.length < 1) return [];
@@ -79,6 +81,26 @@ function Alerts() {
       });
       fetchAlerts();
     } catch {}
+  };
+
+  const startEdit = (alert) => {
+    setEditingId(alert.id);
+    setEditPrice(alert.target_price);
+  };
+
+  const saveEdit = async (id) => {
+    try {
+      await axios.put(
+        `http://localhost:4000/api/alerts/${id}`,
+        { price: editPrice },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEditingId(null);
+      setEditPrice("");
+      fetchAlerts();
+    } catch {
+      toast.error("Failed to update alert");
+    }
   };
 
   useEffect(() => {
@@ -178,6 +200,7 @@ function Alerts() {
                 <th>Target Price</th>
                 <th>Direction</th>
                 <th>Status</th>
+                <th>Edit</th>
                 <th>Delete</th>
               </tr>
             </thead>
@@ -185,9 +208,44 @@ function Alerts() {
               {alerts.map((alert) => (
                 <tr key={alert.id}>
                   <td>{alert.coin_id}</td>
-                  <td>${alert.target_price}</td>
+                  <td>
+                    {editingId === alert.id ? (
+                      <input
+                        type="number"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                      />
+                    ) : (
+                      `$${alert.target_price}`
+                    )}
+                  </td>
                   <td>{alert.direction}</td>
                   <td>{alert.triggered ? "✅ Triggered" : "⏳ Pending"}</td>
+                  <td>
+                    {editingId === alert.id ? (
+                      <>
+                        <button
+                          className="save-btn"
+                          onClick={() => saveEdit(alert.id)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="cancel-btn"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="edit-btn"
+                        onClick={() => startEdit(alert)}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                  </td>
                   <td>
                     <button
                       className="delete-btn"

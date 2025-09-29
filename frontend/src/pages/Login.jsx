@@ -5,24 +5,24 @@ import { AuthContext } from "../context/AuthContext";
 import "./auth.css";
 
 function Login() {
-  const { setUser, setToken } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
     try {
       const res = await axios.post("http://localhost:4000/api/auth/login", {
-        email,
+        emailOrUsername,
         password,
       });
-      setUser(res.data.user);
-      setToken(res.data.token);
+      login(res.data.user, res.data.token);
       navigate("/portfolio");
-      // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("Login failed");
+      setError(err.response?.data?.error || "Login failed. Please try again.");
     }
   };
 
@@ -30,10 +30,10 @@ function Login() {
     <form onSubmit={handleLogin} className="auth-form">
       <h2>Login</h2>
       <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        type="text"
+        placeholder="Email or Username"
+        value={emailOrUsername}
+        onChange={(e) => setEmailOrUsername(e.target.value)}
         required
       />
       <input
@@ -44,6 +44,7 @@ function Login() {
         required
       />
       <button type="submit">Login</button>
+      {error && <p className="error">{error}</p>}
       <p>
         Don't have an account? <Link to="/register">Register</Link>
       </p>

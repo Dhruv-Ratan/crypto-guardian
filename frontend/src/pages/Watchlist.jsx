@@ -11,25 +11,17 @@ function Watchlist() {
     useContext(WatchlistContext);
   const [coinData, setCoinData] = useState([]);
 
+  const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+
   const fetchMarketData = async () => {
     if (!watchlist.length) {
       setCoinData([]);
       return;
     }
     try {
-      const res = await axios.get(
-        `https://api.coingecko.com/api/v3/coins/markets`,
-        {
-          params: {
-            vs_currency: "usd",
-            ids: watchlist.join(","),
-            order: "market_cap_desc",
-            per_page: watchlist.length,
-            page: 1,
-            sparkline: false,
-          },
-        }
-      );
+      const res = await axios.get(`${base}/api/market-data`, {
+        params: { ids: watchlist.join(",") },
+      });
       setCoinData(res.data);
     } catch (err) {
       console.error("Error fetching watchlist market data:", err.message);

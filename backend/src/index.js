@@ -16,6 +16,7 @@ const portfolioRoutes = require("./routes/portfolio");
 const authRoutes = require("./routes/auth");
 const alertsRouter = require("./routes/alerts");
 const watchlistRouter = require("./routes/watchlist");
+const marketRoutes = require("./routes/market");
 
 app.use('/api/sentiment', sentimentRoutes)
 app.use('/api/crypto', cryptoRoutes)
@@ -24,6 +25,7 @@ app.use("/api/portfolio", portfolioRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/watchlist", watchlistRouter);
+app.use("/api", marketRoutes);
 
 app.get('/api/hello', (req, res) => {
   res.json({ msg: 'Backend is alive!' })
