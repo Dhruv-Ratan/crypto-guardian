@@ -6,7 +6,11 @@ const NodeCache = require("node-cache");
 
 const router = express.Router();
 const cache = new NodeCache({ stdTTL: 60 });
+const COINGECKO_API = "https://api.coingecko.com/api/v3";
 
+// ----------------------
+// Add Holding
+// ----------------------
 router.post("/holdings", authMiddleware, async (req, res) => {
     try {
         const { coinId, amount, buyPrice } = req.body;
@@ -23,6 +27,9 @@ router.post("/holdings", authMiddleware, async (req, res) => {
     }
 });
 
+// ----------------------
+// Get Holdings
+// ----------------------
 router.get("/holdings", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM holdings WHERE user_id=$1", [
@@ -35,6 +42,9 @@ router.get("/holdings", authMiddleware, async (req, res) => {
     }
 });
 
+// ----------------------
+// Delete Holding
+// ----------------------
 router.delete("/holdings/:id", authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
@@ -57,6 +67,9 @@ router.delete("/holdings/:id", authMiddleware, async (req, res) => {
     }
 });
 
+// ----------------------
+// Update Holding
+// ----------------------
 router.put("/holdings/:id", authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
@@ -80,6 +93,9 @@ router.put("/holdings/:id", authMiddleware, async (req, res) => {
     }
 });
 
+// ----------------------
+// Enriched Holdings (with market data)
+// ----------------------
 router.get("/holdings/enriched", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM holdings WHERE user_id=$1", [
@@ -97,19 +113,16 @@ router.get("/holdings/enriched", authMiddleware, async (req, res) => {
         let marketData = cache.get(cacheKey);
         if (!marketData) {
             console.log("Fetching from Coingecko API...");
-            const { data } = await axios.get(
-                "https://api.coingecko.com/api/v3/coins/markets",
-                {
-                    params: {
-                        vs_currency: "usd",
-                        ids: coinIds,
-                        order: "market_cap_desc",
-                        per_page: holdings.length,
-                        page: 1,
-                        sparkline: false,
-                    },
-                }
-            );
+            const { data } = await axios.get(`${COINGECKO_API}/coins/markets`, {
+                params: {
+                    vs_currency: "usd",
+                    ids: coinIds,
+                    order: "market_cap_desc",
+                    per_page: holdings.length,
+                    page: 1,
+                    sparkline: false,
+                },
+            });
             marketData = data;
             cache.set(cacheKey, marketData);
         } else {
@@ -118,8 +131,7 @@ router.get("/holdings/enriched", authMiddleware, async (req, res) => {
 
         const enriched = holdings.map((h) => {
             const coin = marketData.find(
-                (c) =>
-                    c.id.toLowerCase().trim() === h.coin_id.toLowerCase().trim()
+                (c) => c.id.toLowerCase().trim() === h.coin_id.toLowerCase().trim()
             );
 
             if (!coin) {
@@ -131,7 +143,9 @@ router.get("/holdings/enriched", authMiddleware, async (req, res) => {
                     current_price: null,
                     current_value: null,
                     invested:
-                        h.buy_price !== null ? Number(h.amount) * Number(h.buy_price) : null,
+                        h.buy_price !== null
+                            ? Number(h.amount) * Number(h.buy_price)
+                            : null,
                     profit_loss: null,
                     profit_loss_percent: null,
                 };
@@ -164,6 +178,67 @@ router.get("/holdings/enriched", authMiddleware, async (req, res) => {
         res
             .status(err.response?.status || 500)
             .json({ error: "Failed to enrich holdings" });
+    }
+});
+
+router.get("/history", authMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT * FROM holdings WHERE user_id=$1 ORDER BY created_at ASC",
+            [req.userId]
+        );
+        const holdings = result.rows;
+
+        if (holdings.length === 0) {
+            return res.json([]);
+        }
+        const startDate = new Date(holdings[0].created_at);
+        const today = new Date();
+        const formatDate = (d) => d.toISOString().split("T")[0];
+        const historyCache = {};
+        for (const h of holdings) {
+            if (!historyCache[h.coin_id]) {
+                const { data } = await axios.get(
+                    `https://api.coingecko.com/api/v3/coins/${h.coin_id}/market_chart`,
+                    {
+                        params: {
+                            vs_currency: "usd",
+                            days: "max",
+                            interval: "daily",
+                        },
+                    }
+                );
+                historyCache[h.coin_id] = data.prices.map(([ts, price]) => ({
+                    date: formatDate(new Date(ts)),
+                    price,
+                }));
+            }
+        }
+        const history = [];
+        for (
+            let d = new Date(startDate);
+            d <= today;
+            d.setDate(d.getDate() + 1)
+        ) {
+            const dateStr = formatDate(d);
+
+            let dailyValue = 0;
+            for (const h of holdings) {
+                if (new Date(h.created_at) <= d) {
+                    const prices = historyCache[h.coin_id];
+                    const match = prices.find((p) => p.date === dateStr);
+                    const priceAtDay = match ? match.price : h.buy_price;
+                    dailyValue += Number(h.amount) * priceAtDay;
+                }
+            }
+
+            history.push({ date: dateStr, value: dailyValue });
+        }
+
+        res.json(history);
+    } catch (err) {
+        console.error("Error fetching portfolio history:", err.message);
+        res.status(500).json({ error: "Failed to fetch portfolio history" });
     }
 });
 

@@ -28,14 +28,49 @@
     border-radius: 8px;
     font-size: 14px;
     outline: none;
-    transition: border-color 0.2s ease, background 0.3s ease, color 0.3s ease;
     background: var(--card-bg);
     color: var(--text-color);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-bar:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-card h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.stat-card p {
+    margin: 6px 0 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--primary-color);
 }
 
 .crypto-table {
@@ -43,11 +78,10 @@
     border-collapse: collapse;
     margin-top: 15px;
     background: var(--card-bg);
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--card-border);
-    transition: background 0.3s ease, color 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .crypto-table th,
@@ -61,10 +95,11 @@
 .crypto-table th {
     background: var(--primary-color);
     color: #fff;
+    font-weight: bold;
 }
 
 .crypto-table tr:hover {
-    background: rgba(0, 123, 255, 0.05);
+    background: rgba(0, 123, 255, 0.07);
 }
 
 .positive-change {
@@ -77,73 +112,19 @@
     font-weight: bold;
 }
 
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 15px;
-    }
-
-    .crypto-table {
-        font-size: 14px;
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    .crypto-table th,
-    .crypto-table td {
-        vertical-align: middle;
-        padding: 12px;
-    }
-}
-
 .coin-link {
     text-decoration: none;
     color: inherit;
-    font-weight: bold;
+    font-weight: 600;
     transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .coin-link:hover {
     color: var(--primary-color);
     text-decoration: underline;
-    cursor: pointer;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin: 20px 0;
-}
-
-.stat-card {
-    padding: 15px;
-    border-radius: 10px;
-    background: #f5f5f5;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.stat-card h4 {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.stat-card p {
-    margin: 5px 0 0;
-    font-size: 1.1rem;
-    font-weight: bold;
-}
-
-body.dark .stat-card {
-    background: #1e1e1e;
-    color: #fff;
-    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.05);
-}
-
-body.dark .stat-card h4 {
-    color: #aaa;
 }
 
 .watchlist-toggle {
@@ -168,6 +149,7 @@ body.dark .stat-card h4 {
     justify-content: space-between;
     align-items: center;
     margin: 15px 0;
+    gap: 10px;
 }
 
 .watchlist-filter {
@@ -176,4 +158,38 @@ body.dark .stat-card h4 {
     align-items: center;
     gap: 6px;
     cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+
+    .crypto-table {
+        font-size: 14px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .crypto-table th,
+    .crypto-table td {
+        padding: 10px;
+    }
+
+    .crypto-table th:nth-child(5),
+    .crypto-table td:nth-child(5),
+    .crypto-table th:nth-child(6),
+    .crypto-table td:nth-child(6),
+    .crypto-table th:nth-child(7),
+    .crypto-table td:nth-child(7),
+    .crypto-table th:nth-child(8),
+    .crypto-table td:nth-child(8) {
+        display: none;
+    }
+
+    .dashboard-filters {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

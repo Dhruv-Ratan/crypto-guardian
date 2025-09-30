@@ -11,15 +11,22 @@ let trendingLastFetch = 0;
 
 const CACHE_DURATION = 30 * 1000;
 
+function downsample(arr, points = 30) {
+    if (!arr || arr.length === 0) return [];
+    const step = Math.ceil(arr.length / points);
+    return arr.filter((_, idx) => idx % step === 0).map((p, i) => ({
+        price: p,
+        idx: i,
+    }));
+}
+
 router.get("/market-data", async (req, res) => {
     try {
         const now = Date.now();
         if (cachedMarket && now - marketLastFetch < 2 * 60 * 1000) {
-            console.log("✅ Serving market data from cache");
             return res.json(filterCoins(cachedMarket, req.query.ids));
         }
 
-        console.log("🌐 Fetching fresh market data...");
         const response = await axios.get(
             "https://api.coingecko.com/api/v3/coins/markets",
             {
@@ -34,27 +41,21 @@ router.get("/market-data", async (req, res) => {
             }
         );
 
-        let data = response.data;
-        data.forEach((coin) => {
-            if (coin.sparkline_in_7d && coin.sparkline_in_7d.price) {
-                coin.sparkline_in_7d.price = coin.sparkline_in_7d.price.filter(
-                    (_, i) => i % 6 === 0
-                );
-            }
-        });
+        let data = response.data.map((coin) => ({
+            ...coin,
+            sparkline_processed: coin.sparkline_in_7d
+                ? downsample(coin.sparkline_in_7d.price)
+                : null,
+        }));
 
         cachedMarket = data;
         marketLastFetch = now;
 
         res.json(filterCoins(cachedMarket, req.query.ids));
     } catch (err) {
-        console.error("❌ Error fetching market data:", err.message);
-
         if (cachedMarket) {
-            console.log("⚠️ Returning stale cached market data");
             return res.json(filterCoins(cachedMarket, req.query.ids));
         }
-
         res.status(500).json({ error: "Failed to fetch market data" });
     }
 });
@@ -64,12 +65,10 @@ router.get("/coin/:id", async (req, res) => {
     const now = Date.now();
 
     if (coinCache[id] && now - coinCache[id].lastFetch < 2 * 60 * 1000) {
-        console.log(`✅ Serving ${id} details from cache`);
         return res.json(coinCache[id].data);
     }
 
     try {
-        console.log(`🌐 Fetching fresh details for ${id}...`);
         const response = await axios.get(
             `https://api.coingecko.com/api/v3/coins/${id}`,
             {
@@ -87,13 +86,9 @@ router.get("/coin/:id", async (req, res) => {
         coinCache[id] = { data: response.data, lastFetch: now };
         res.json(response.data);
     } catch (err) {
-        console.error(`❌ Error fetching ${id} details:`, err.message);
-
         if (coinCache[id]) {
-            console.log(`⚠️ Returning stale cache for ${id}`);
             return res.json(coinCache[id].data);
         }
-
         res.status(500).json({ error: `Failed to fetch ${id} details` });
     }
 });
@@ -105,12 +100,10 @@ router.get("/coin/:id/market-chart", async (req, res) => {
     const now = Date.now();
 
     if (coinCache[cacheKey] && now - coinCache[cacheKey].lastFetch < 2 * 60 * 1000) {
-        console.log(`✅ Serving ${id} chart (${days}d) from cache`);
         return res.json(coinCache[cacheKey].data);
     }
 
     try {
-        console.log(`🌐 Fetching ${id} chart (${days}d)...`);
         const response = await axios.get(
             `https://api.coingecko.com/api/v3/coins/${id}/market_chart`,
             { params: { vs_currency: "usd", days } }
@@ -118,19 +111,15 @@ router.get("/coin/:id/market-chart", async (req, res) => {
 
         let chartData = response.data;
         if (chartData.prices) {
-            chartData.prices = chartData.prices.filter((_, i) => i % 6 === 0);
+            chartData.prices = downsample(chartData.prices.map((p) => p[1]));
         }
 
         coinCache[cacheKey] = { data: chartData, lastFetch: now };
         res.json(chartData);
     } catch (err) {
-        console.error(`❌ Error fetching ${id} chart:`, err.message);
-
         if (coinCache[cacheKey]) {
-            console.log(`⚠️ Returning stale chart cache for ${id}`);
             return res.json(coinCache[cacheKey].data);
         }
-
         res.status(500).json({ error: `Failed to fetch ${id} chart` });
     }
 });
@@ -139,17 +128,14 @@ router.get("/trending", async (req, res) => {
     const now = Date.now();
 
     if (trendingCache && now - trendingLastFetch < CACHE_DURATION) {
-        console.log("✅ Serving trending coins from cache");
         return res.json(trendingCache);
     }
 
     try {
-        console.log("🌐 Fetching fresh trending coins...");
         const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
 
         let coins = response.data.coins || [];
         if (!coins.length) {
-            console.warn("⚠️ CoinGecko returned no trending coins → using fallback list");
             coins = getFallbackTrending();
         }
 
@@ -158,14 +144,9 @@ router.get("/trending", async (req, res) => {
 
         res.json(trendingCache);
     } catch (err) {
-        console.error("❌ Error fetching trending:", err.message);
-
         if (trendingCache) {
-            console.log("⚠️ Returning last cached trending coins");
             return res.json(trendingCache);
         }
-
-        console.log("⚠️ Using hardcoded fallback trending list");
         res.json({ coins: getFallbackTrending() });
     }
 });

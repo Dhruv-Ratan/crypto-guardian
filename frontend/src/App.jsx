@@ -21,6 +21,8 @@ import Register from "./pages/Register";
 import Alerts from "./pages/Alerts";
 import Watchlist from "./pages/Watchlist";
 import { WatchlistProvider } from "./context/WatchlistContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./styles.css";
 
 function Navbar() {
@@ -117,6 +119,16 @@ function App() {
               <Route path="/register" element={<Register />} />
             </Routes>
             <Footer />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              draggable
+              theme="colored"
+            />
           </Router>
         </WatchlistProvider>
       </ThemeProvider>

@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import axios from "axios";
 import "./Sentiment.css";
+import { toast } from "react-toastify";
 
 function Sentiment() {
   const [text, setText] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+
   const analyzeSentiment = async () => {
     if (!text.trim()) {
-      alert("Please enter some text!");
+      toast.warn("⚠️ Please enter some text!");
       return;
     }
 
@@ -17,11 +20,12 @@ function Sentiment() {
     setResult(null);
 
     try {
-      const res = await axios.post("/api/sentiment/analyze", { text });
+      const res = await axios.post(`${base}/api/sentiment/analyze`, { text });
       setResult(res.data);
+      toast.success("✅ Sentiment analyzed!");
     } catch (err) {
-      console.error(err);
-      alert("Error analyzing sentiment");
+      console.error("Error analyzing sentiment:", err);
+      toast.error("❌ Failed to analyze sentiment. Try again.");
     } finally {
       setLoading(false);
     }
@@ -40,16 +44,16 @@ function Sentiment() {
 
     return text.split(/\s+/).map((word, idx) => {
       const clean = word.toLowerCase().replace(/[^a-z]/gi, "");
-      if (result.positive.includes(clean)) {
+      if (result.positive?.includes(clean)) {
         return (
-          <span key={idx} className="positive">
+          <span key={idx} className="highlight positive">
             {word}{" "}
           </span>
         );
       }
-      if (result.negative.includes(clean)) {
+      if (result.negative?.includes(clean)) {
         return (
-          <span key={idx} className="negative">
+          <span key={idx} className="highlight negative">
             {word}{" "}
           </span>
         );
@@ -71,7 +75,6 @@ function Sentiment() {
           placeholder="Type something to analyze..."
         />
 
-        <br />
         <button
           className="sentiment-button"
           onClick={analyzeSentiment}
@@ -89,14 +92,15 @@ function Sentiment() {
               <strong>Sentiment:</strong> {getSentimentLabel(result.score)}
             </p>
             <p>
-              <strong>Score:</strong> {result.score}
+              <strong>Score:</strong> {Number(result.score).toFixed(3)}
             </p>
             <p>
-              <strong>Comparative:</strong> {result.comparative.toFixed(2)}
+              <strong>Comparative:</strong>{" "}
+              {Number(result.comparative).toFixed(3)}
             </p>
 
             <div className="highlighted-text">
-              <strong>Analyzed Text:</strong>
+              <h4>Analyzed Text</h4>
               <p>{highlightText(text)}</p>
             </div>
           </div>

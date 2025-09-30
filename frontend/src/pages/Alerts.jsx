@@ -1,24 +1,35 @@
-/* eslint-disable no-empty */
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { toast, ToastContainer } from "react-toastify";
 import AsyncSelect from "react-select/async";
+import { useNavigate } from "react-router-dom";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import "react-toastify/dist/ReactToastify.css";
 import "./Alerts.css";
 
 function Alerts() {
   const { token } = useContext(AuthContext);
   const { theme } = useTheme();
+  const navigate = useNavigate();
+
   const [alerts, setAlerts] = useState([]);
+  const [triggeredAlerts, setTriggeredAlerts] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [targetPrice, setTargetPrice] = useState("");
   const [direction, setDirection] = useState("above");
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [tab, setTab] = useState("active");
+
   const prevAlertsRef = useRef([]);
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
+
+  const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
   const loadCoinOptions = async (inputValue) => {
     if (!inputValue || inputValue.length < 1) return [];
@@ -37,9 +48,9 @@ function Alerts() {
     }
   };
 
-  const fetchAlerts = async () => {
+  const fetchActiveAlerts = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/alerts", {
+      const res = await axios.get(`${base}/api/alerts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const newAlerts = res.data;
@@ -53,7 +64,36 @@ function Alerts() {
       });
       prevAlertsRef.current = newAlerts;
       setAlerts(newAlerts);
-    } catch {}
+    } catch (err) {
+      console.error("Error fetching active alerts:", err);
+      toast.error("❌ Failed to load active alerts.");
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  const fetchTriggeredAlerts = async () => {
+    try {
+      const res = await axios.get(`${base}/api/alerts/triggered`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTriggeredAlerts(res.data);
+    } catch (err) {
+      console.error("Error fetching triggered alerts:", err);
+      toast.error("❌ Failed to load triggered alerts.");
+    }
+  };
+
+  const clearTriggeredAlerts = async () => {
+    try {
+      await axios.delete(`${base}/api/alerts/triggered`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.info("🗑️ Triggered alerts cleared");
+      fetchTriggeredAlerts();
+    } catch {
+      toast.error("Failed to clear history");
+    }
   };
 
   const createAlert = async (e) => {
@@ -62,25 +102,30 @@ function Alerts() {
     setLoading(true);
     try {
       await axios.post(
-        "http://localhost:4000/api/alerts",
+        `${base}/api/alerts`,
         { coin_id: selectedCoin.value, target_price: targetPrice, direction },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedCoin(null);
       setTargetPrice("");
       setDirection("above");
-      fetchAlerts();
-    } catch {}
+      fetchActiveAlerts();
+    } catch (err) {
+      console.error("Error creating alert:", err);
+      toast.error("❌ Failed to create alert.");
+    }
     setLoading(false);
   };
 
   const deleteAlert = async (id) => {
     try {
-      await axios.delete(`http://localhost:4000/api/alerts/${id}`, {
+      await axios.delete(`${base}/api/alerts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      fetchAlerts();
-    } catch {}
+      fetchActiveAlerts();
+    } catch {
+      toast.error("❌ Failed to delete alert.");
+    }
   };
 
   const startEdit = (alert) => {
@@ -91,24 +136,32 @@ function Alerts() {
   const saveEdit = async (id) => {
     try {
       await axios.put(
-        `http://localhost:4000/api/alerts/${id}`,
+        `${base}/api/alerts/${id}`,
         { price: editPrice },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setEditingId(null);
       setEditPrice("");
-      fetchAlerts();
+      fetchActiveAlerts();
     } catch {
       toast.error("Failed to update alert");
     }
   };
 
   useEffect(() => {
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000);
+    if (!token) {
+      toast.error("⚠️ Please log in to manage alerts.");
+      navigate("/login");
+      return;
+    }
+    fetchActiveAlerts();
+    fetchTriggeredAlerts();
+    const interval = setInterval(() => {
+      fetchActiveAlerts();
+      fetchTriggeredAlerts();
+    }, 10000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   return (
     <div className="alerts-container">
@@ -118,148 +171,201 @@ function Alerts() {
         autoClose={5000}
         theme={theme === "dark" ? "dark" : "light"}
       />
-      <form onSubmit={createAlert} className="alerts-form">
-        <div className="coin-select" style={{ minWidth: 280 }}>
-          <AsyncSelect
-            cacheOptions
-            loadOptions={loadCoinOptions}
-            defaultOptions={false}
-            value={selectedCoin}
-            onChange={setSelectedCoin}
-            placeholder="Search coin..."
-            isClearable
-            menuPortalTarget={
-              typeof document !== "undefined" ? document.body : null
-            }
-            menuPlacement="auto"
-            styles={{
-              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-              control: (base) => ({
-                ...base,
-                backgroundColor: theme === "dark" ? "#1e1e1e" : "#fff",
-                borderColor: theme === "dark" ? "#444" : "#ccc",
-                color: theme === "dark" ? "#fff" : "#000",
-              }),
-              input: (base) => ({
-                ...base,
-                color: theme === "dark" ? "#fff" : "#000",
-              }),
-              menu: (base) => ({
-                ...base,
-                backgroundColor: theme === "dark" ? "#1e1e1e" : "#fff",
-              }),
-              option: (base, { isFocused, isSelected }) => ({
-                ...base,
-                backgroundColor: isSelected
-                  ? theme === "dark"
-                    ? "#333"
-                    : "#ddd"
-                  : isFocused
-                  ? theme === "dark"
-                    ? "#444"
-                    : "#eee"
-                  : "transparent",
-                color: theme === "dark" ? "#fff" : "#000",
-              }),
-              singleValue: (base) => ({
-                ...base,
-                color: theme === "dark" ? "#fff" : "#000",
-              }),
-              placeholder: (base) => ({
-                ...base,
-                color: theme === "dark" ? "#aaa" : "#666",
-              }),
-            }}
-          />
-        </div>
-        <input
-          type="number"
-          placeholder="Target Price (USD)"
-          value={targetPrice}
-          onChange={(e) => setTargetPrice(e.target.value)}
-        />
-        <select
-          value={direction}
-          onChange={(e) => setDirection(e.target.value)}
+
+      {/* Tab Switcher */}
+      <div className="alerts-tabs">
+        <button
+          className={tab === "active" ? "active" : ""}
+          onClick={() => setTab("active")}
         >
-          <option value="above">Above</option>
-          <option value="below">Below</option>
-        </select>
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Add Alert"}
+          Active Alerts
         </button>
-      </form>
-      <div className="alerts-list">
-        {alerts.length === 0 ? (
-          <p>No alerts created yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Coin</th>
-                <th>Target Price</th>
-                <th>Direction</th>
-                <th>Status</th>
-                <th>Edit</th>
-                <th>Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alerts.map((alert) => (
-                <tr key={alert.id}>
-                  <td>{alert.coin_id}</td>
-                  <td>
-                    {editingId === alert.id ? (
-                      <input
-                        type="number"
-                        value={editPrice}
-                        onChange={(e) => setEditPrice(e.target.value)}
-                      />
-                    ) : (
-                      `$${alert.target_price}`
-                    )}
-                  </td>
-                  <td>{alert.direction}</td>
-                  <td>{alert.triggered ? "✅ Triggered" : "⏳ Pending"}</td>
-                  <td>
-                    {editingId === alert.id ? (
-                      <>
-                        <button
-                          className="save-btn"
-                          onClick={() => saveEdit(alert.id)}
-                        >
-                          Save
-                        </button>
-                        <button
-                          className="cancel-btn"
-                          onClick={() => setEditingId(null)}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        className="edit-btn"
-                        onClick={() => startEdit(alert)}
-                      >
-                        ✏️
-                      </button>
-                    )}
-                  </td>
-                  <td>
-                    <button
-                      className="delete-btn"
-                      onClick={() => deleteAlert(alert.id)}
-                    >
-                      ❌
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <button
+          className={tab === "triggered" ? "active" : ""}
+          onClick={() => setTab("triggered")}
+        >
+          Triggered Alerts
+        </button>
       </div>
+
+      {tab === "active" && (
+        <>
+          <form onSubmit={createAlert} className="alerts-form">
+            <div className="coin-select" style={{ minWidth: 280 }}>
+              <AsyncSelect
+                cacheOptions
+                loadOptions={loadCoinOptions}
+                defaultOptions={false}
+                value={selectedCoin}
+                onChange={setSelectedCoin}
+                placeholder="Search coin..."
+                isClearable
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: theme === "dark" ? "#1e1e1e" : "#fff",
+                    borderColor: theme === "dark" ? "#444" : "#ccc",
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    color: theme === "dark" ? "#fff" : "#000",
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: theme === "dark" ? "#1e1e1e" : "#fff",
+                  }),
+                  option: (base, { isFocused, isSelected }) => ({
+                    ...base,
+                    backgroundColor: isSelected
+                      ? theme === "dark"
+                        ? "#333"
+                        : "#ddd"
+                      : isFocused
+                      ? theme === "dark"
+                        ? "#444"
+                        : "#eee"
+                      : "transparent",
+                  }),
+                }}
+              />
+            </div>
+            <input
+              type="number"
+              placeholder="Target Price (USD)"
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(e.target.value)}
+            />
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value)}
+            >
+              <option value="above">Above</option>
+              <option value="below">Below</option>
+            </select>
+            <button type="submit" disabled={loading}>
+              {loading ? "Creating..." : "Add Alert"}
+            </button>
+          </form>
+
+          <div className="alerts-list">
+            {pageLoading ? (
+              <Skeleton
+                count={5}
+                height={30}
+                style={{ marginBottom: "10px" }}
+              />
+            ) : alerts.length === 0 ? (
+              <p>No active alerts.</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Coin</th>
+                    <th>Target Price</th>
+                    <th>Direction</th>
+                    <th>Status</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alerts.map((alert) => (
+                    <tr key={alert.id}>
+                      <td>{alert.coin_id}</td>
+                      <td>
+                        {editingId === alert.id ? (
+                          <input
+                            type="number"
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                          />
+                        ) : (
+                          `$${alert.target_price}`
+                        )}
+                      </td>
+                      <td>{alert.direction}</td>
+                      <td>{alert.triggered ? "✅ Triggered" : "⏳ Pending"}</td>
+                      <td>
+                        {editingId === alert.id ? (
+                          <>
+                            <button
+                              className="save-btn"
+                              onClick={() => saveEdit(alert.id)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="cancel-btn"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="edit-btn"
+                            onClick={() => startEdit(alert)}
+                          >
+                            ✏️
+                          </button>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className="delete-btn"
+                          onClick={() => deleteAlert(alert.id)}
+                        >
+                          ❌
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+
+      {tab === "triggered" && (
+        <div className="alerts-list">
+          <div style={{ textAlign: "right", marginBottom: "10px" }}>
+            <button onClick={clearTriggeredAlerts} className="clear-btn">
+              🗑️ Clear History
+            </button>
+          </div>
+          {pageLoading ? (
+            <Skeleton count={5} height={30} style={{ marginBottom: "10px" }} />
+          ) : triggeredAlerts.length === 0 ? (
+            <p>No triggered alerts yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Coin</th>
+                  <th>Target Price</th>
+                  <th>Direction</th>
+                  <th>Triggered At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {triggeredAlerts.map((alert) => (
+                  <tr key={alert.id}>
+                    <td>{alert.coin_id}</td>
+                    <td>${alert.target_price}</td>
+                    <td>{alert.direction}</td>
+                    <td>
+                      {alert.triggered_at
+                        ? new Date(alert.triggered_at).toLocaleString()
+                        : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }

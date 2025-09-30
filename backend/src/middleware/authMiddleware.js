@@ -1,24 +1,43 @@
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-function authMiddleware(req, res, next) {
-    const token = req.headers["authorization"]?.split(" ")[1];
-
-    if (!token) return res.status(401).json({ error: "No token provided" });
-
+module.exports = (req, res, next) => {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.userId = decoded.id;
-        next();
-    } catch (err) {
-        if (err.name === "TokenExpiredError") {
-            return res.status(401).json({ error: "Token expired, please login again" });
+        const authHeader = req.headers["authorization"];
+        if (!authHeader) {
+            console.error("❌ No Authorization header");
+            return res.status(401).json({ error: "No token provided" });
         }
-        console.error("JWT verification failed:", err.message);
-        return res.status(401).json({ error: "Invalid token" });
+        if (!authHeader.startsWith("Bearer ")) {
+            console.error("❌ Invalid header format:", authHeader);
+            return res.status(401).json({ error: "Invalid token format" });
+        }
+        const token = authHeader.split(" ")[1];
+        if (!token) {
+            console.error("❌ Token missing after Bearer");
+            return res.status(401).json({ error: "Missing token" });
+        }
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+            if (err) {
+                if (err.name === "TokenExpiredError") {
+                    console.error("❌ Token expired at", err.expiredAt);
+                    return res.status(401).json({ error: "Token expired" });
+                } else if (err.name === "JsonWebTokenError") {
+                    console.error("❌ Invalid token:", err.message);
+                    return res.status(401).json({ error: "Invalid token" });
+                } else {
+                    console.error("❌ JWT error:", err.message);
+                    return res.status(401).json({ error: "Token verification failed" });
+                }
+            }
+            req.userId = decoded.id || decoded.user_id;
+            if (!req.userId) {
+                console.error("❌ Token decoded but no userId:", decoded);
+                return res.status(401).json({ error: "Invalid token payload" });
+            }
+            next();
+        });
+    } catch (err) {
+        console.error("❌ Unexpected auth error:", err.message);
+        return res.status(500).json({ error: "Auth middleware failed" });
     }
-}
-
-module.exports = authMiddleware;
+};

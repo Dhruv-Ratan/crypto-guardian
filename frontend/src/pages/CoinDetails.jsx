@@ -10,7 +10,10 @@ import {
   PointElement,
   Tooltip,
   Legend,
+  Title,
+  TimeScale,
 } from "chart.js";
+import "chartjs-adapter-date-fns";
 import { AuthContext } from "../context/AuthContext";
 import "./CoinDetails.css";
 
@@ -20,7 +23,9 @@ ChartJS.register(
   LinearScale,
   PointElement,
   Tooltip,
-  Legend
+  Legend,
+  Title,
+  TimeScale
 );
 
 function CoinDetails() {
@@ -28,49 +33,66 @@ function CoinDetails() {
   const { token } = useContext(AuthContext);
   const [coin, setCoin] = useState(null);
   const [chartData, setChartData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [timeframe, setTimeframe] = useState("30");
   const [watchlistMsg, setWatchlistMsg] = useState("");
+  const [error, setError] = useState(null);
 
   const base = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
   const fetchCoinData = async () => {
     try {
-      const marketRes = await axios.get(`${base}/api/market-data?ids=${id}`);
-      const marketCoin = marketRes.data[0] || null;
+      setError(null);
 
-      const detailRes = await axios.get(`${base}/api/coin/${id}`);
+      const [marketRes, detailRes] = await Promise.all([
+        axios.get(`${base}/api/market-data?ids=${id}`),
+        axios.get(`${base}/api/coin/${id}`),
+      ]);
+
+      const marketCoin = marketRes.data[0] || {};
+      const detailCoin = detailRes.data;
 
       setCoin({
-        ...detailRes.data,
-        market_data: detailRes.data.market_data || {
-          current_price: { usd: marketCoin?.current_price },
-          market_cap: { usd: marketCoin?.market_cap },
-          price_change_percentage_24h: marketCoin?.price_change_percentage_24h,
-          total_volume: { usd: marketCoin?.total_volume },
+        ...detailCoin,
+        market_data: detailCoin.market_data || {
+          current_price: { usd: marketCoin?.current_price || 0 },
+          market_cap: { usd: marketCoin?.market_cap || 0 },
+          price_change_percentage_24h:
+            marketCoin?.price_change_percentage_24h || 0,
+          total_volume: { usd: marketCoin?.total_volume || 0 },
         },
-        image: detailRes.data.image || { large: marketCoin?.image },
-        symbol: detailRes.data.symbol || marketCoin?.symbol,
-        name: detailRes.data.name || marketCoin?.name,
+        image: detailCoin.image || { large: marketCoin?.image },
+        symbol: detailCoin.symbol || marketCoin?.symbol || "",
+        name: detailCoin.name || marketCoin?.name || id,
       });
     } catch (err) {
       console.error("Error fetching coin details:", err.message);
+      setError("Failed to fetch coin details.");
     }
   };
 
   const fetchHistoricalData = async (days) => {
     try {
       setLoading(true);
+      setError(null);
+
       const res = await axios.get(`${base}/api/coin/${id}/market-chart`, {
         params: { days },
       });
 
-      const prices = res.data.prices.map((p) => ({
-        x: new Date(p[0]).toLocaleDateString(),
-        y: p[1],
-      }));
+      if (!res.data?.prices || res.data.prices.length === 0) {
+        setChartData(null);
+        return;
+      }
 
-      if (prices.length === 0) return;
+      // ✅ Handle both formats: [timestamp, price] OR {price, idx}
+      const prices = res.data.prices.map((p, i) => {
+        if (Array.isArray(p)) {
+          return { x: p[0], y: Number(p[1]) };
+        } else {
+          return { x: i, y: Number(p.price) };
+        }
+      });
 
       const firstPrice = prices[0].y;
       const lastPrice = prices[prices.length - 1].y;
@@ -82,11 +104,10 @@ function CoinDetails() {
         : "rgba(244, 67, 54, 0.2)";
 
       setChartData({
-        labels: prices.map((p) => p.x),
         datasets: [
           {
             label: `${id} (last ${days} days)`,
-            data: prices.map((p) => p.y),
+            data: prices,
             borderColor: lineColor,
             backgroundColor: fillColor,
             pointRadius: 0,
@@ -97,6 +118,7 @@ function CoinDetails() {
       });
     } catch (err) {
       console.error("Error fetching historical data:", err.message);
+      setError("Failed to fetch historical data.");
     } finally {
       setLoading(false);
     }
@@ -131,17 +153,25 @@ function CoinDetails() {
 
   return (
     <div className="coin-details-container">
-      {coin ? (
+      {error && <p className="error-msg">{error}</p>}
+
+      {!coin ? (
+        <p>Loading coin details...</p>
+      ) : (
         <>
           <h2>
             {coin.name} ({coin.symbol.toUpperCase()})
           </h2>
-          <img src={coin.image.large} alt={coin.name} width={80} />
-          <p
-            dangerouslySetInnerHTML={{
-              __html: coin.description?.en?.split(".")[0] || "",
-            }}
-          ></p>
+          {coin.image?.large && (
+            <img src={coin.image.large} alt={coin.name} width={80} />
+          )}
+          {coin.description?.en && (
+            <p
+              dangerouslySetInnerHTML={{
+                __html: coin.description.en.split(".")[0] || "",
+              }}
+            ></p>
+          )}
 
           <div className="stats-grid">
             <div className="stat-card">
@@ -199,11 +229,39 @@ function CoinDetails() {
                 responsive: true,
                 plugins: {
                   legend: { display: true },
-                  tooltip: { mode: "index", intersect: false },
+                  tooltip: {
+                    mode: "index",
+                    intersect: false,
+                    callbacks: {
+                      label: (context) =>
+                        `$${context.parsed.y.toLocaleString()}`,
+                    },
+                  },
                 },
                 scales: {
-                  x: { ticks: { maxTicksLimit: 10 } },
-                  y: { beginAtZero: false },
+                  x: {
+                    type:
+                      chartData.datasets[0].data[0].x > 1000000000000
+                        ? "time" // timestamp (ms)
+                        : "linear", // index
+                    time: {
+                      unit:
+                        timeframe === "7"
+                          ? "hour"
+                          : timeframe === "30"
+                          ? "day"
+                          : timeframe === "90"
+                          ? "week"
+                          : "month",
+                    },
+                    ticks: { maxTicksLimit: 8 },
+                  },
+                  y: {
+                    beginAtZero: false,
+                    ticks: {
+                      callback: (value) => `$${value.toLocaleString()}`,
+                    },
+                  },
                 },
               }}
             />
@@ -211,8 +269,6 @@ function CoinDetails() {
             <p>No chart data available</p>
           )}
         </>
-      ) : (
-        <p>Loading coin details...</p>
       )}
     </div>
   );

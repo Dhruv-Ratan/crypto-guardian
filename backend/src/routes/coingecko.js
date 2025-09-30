@@ -1,79 +1,75 @@
 const express = require("express");
 const axios = require("axios");
-const NodeCache = require("node-cache");
-
 const router = express.Router();
-const cache = new NodeCache({ stdTTL: 60 });
-router.get("/top", async (req, res) => {
-  const cacheKey = `top_${req.query.vs_currency || "usd"}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return res.json(cached);
 
+let cachedMarket = null;
+let marketLastFetch = 0;
+
+let coinCache = {};
+let trendingCache = null;
+let trendingLastFetch = 0;
+
+let globalCache = null;
+let globalLastFetch = 0;
+
+const CACHE_DURATION = 30 * 1000;
+
+function downsample(arr, points = 30) {
+  if (!arr || arr.length === 0) return [];
+  const step = Math.ceil(arr.length / points);
+  return arr.filter((_, idx) => idx % step === 0).map((p, i) => ({
+    price: p,
+    idx: i,
+  }));
+}
+
+function downsamplePairs(arr, points = 300) {
+  if (!arr || arr.length === 0) return [];
+  const step = Math.ceil(arr.length / points);
+  return arr.filter((_, idx) => idx % step === 0);
+}
+
+router.get("/market-data", async (req, res) => {
   try {
-    const vs_currency = req.query.vs_currency || "usd";
+    const now = Date.now();
+    if (cachedMarket && now - marketLastFetch < 2 * 60 * 1000) {
+      return res.json(filterCoins(cachedMarket, req.query.ids));
+    }
 
     const response = await axios.get(
       "https://api.coingecko.com/api/v3/coins/markets",
       {
         params: {
-          vs_currency,
+          vs_currency: "usd",
           order: "market_cap_desc",
-          per_page: 10,
+          per_page: 50,
           page: 1,
           sparkline: true,
-          price_change_percentage: "24h,7d",
+          price_change_percentage: "1h,24h,7d",
         },
       }
     );
 
-    cache.set(cacheKey, response.data);
-    res.json(response.data);
+    let data = response.data.map((coin) => ({
+      ...coin,
+      sparkline_processed: coin.sparkline_in_7d
+        ? downsample(coin.sparkline_in_7d.price)
+        : null,
+    }));
+
+    cachedMarket = data;
+    marketLastFetch = now;
+
+    res.json(filterCoins(cachedMarket, req.query.ids));
   } catch (err) {
-    console.error("Error fetching market data:", err.message);
-    res.status(err.response?.status || 500).json({ error: "Failed to fetch market data" });
-  }
-});
-
-router.get("/trending", async (req, res) => {
-  const cacheKey = "trending";
-  const cached = cache.get(cacheKey);
-  if (cached) return res.json(cached);
-
-  try {
-    const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
-    cache.set(cacheKey, response.data);
-    res.json(response.data);
-  } catch (err) {
-    console.error("Error fetching trending coins:", err.message);
-    res.status(err.response?.status || 500).json({ error: "Failed to fetch trending coins" });
-  }
-});
-
-router.get("/coin/:id", async (req, res) => {
-  const { id } = req.params;
-  const cacheKey = `coin_${id}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return res.json(cached);
-
-  try {
-    const response = await axios.get(
-      `https://api.coingecko.com/api/v3/coins/${id}`,
-      { params: { localization: false, sparkline: true } }
-    );
-
-    cache.set(cacheKey, response.data);
-    res.json(response.data);
-  } catch (err) {
-    console.error("Error fetching coin details:", err.message);
-    res.status(err.response?.status || 500).json({ error: "Failed to fetch coin details" });
+    if (cachedMarket) {
+      return res.json(filterCoins(cachedMarket, req.query.ids));
+    }
+    res.status(500).json({ error: "Failed to fetch market data" });
   }
 });
 
 router.get("/coins", async (req, res) => {
-  const cacheKey = "coins_list";
-  const cached = cache.get(cacheKey);
-  if (cached) return res.json(cached);
-
   try {
     const response = await axios.get(
       "https://api.coingecko.com/api/v3/coins/markets",
@@ -81,27 +77,190 @@ router.get("/coins", async (req, res) => {
         params: {
           vs_currency: "usd",
           order: "market_cap_desc",
-          per_page: 100,
+          per_page: 50,  // reduce to 50 for reliability
           page: 1,
           sparkline: false,
         },
       }
     );
-
-    const coins = response.data.map((coin) => ({
-      id: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
-      image: coin.image,
-      current_price: coin.current_price,
-    }));
-
-    cache.set(cacheKey, coins);
-    res.json(coins);
+    res.json(response.data);
   } catch (err) {
-    console.error("Error fetching coins:", err.message);
-    res.status(err.response?.status || 500).json({ error: "Failed to fetch coins" });
+    console.error("Error fetching coins list:", err.message);
+    res.status(500).json({ error: "Failed to fetch coins list" });
   }
 });
+
+router.get("/coin/:id", async (req, res) => {
+  const { id } = req.params;
+  const now = Date.now();
+
+  if (coinCache[id] && now - coinCache[id].lastFetch < 2 * 60 * 1000) {
+    return res.json(coinCache[id].data);
+  }
+
+  try {
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/coins/${id}`,
+      {
+        params: {
+          localization: false,
+          tickers: false,
+          market_data: true,
+          community_data: false,
+          developer_data: false,
+          sparkline: false,
+        },
+      }
+    );
+
+    coinCache[id] = { data: response.data, lastFetch: now };
+    res.json(response.data);
+  } catch (err) {
+    if (coinCache[id]) {
+      return res.json(coinCache[id].data);
+    }
+    res.status(500).json({ error: `Failed to fetch ${id} details` });
+  }
+});
+
+router.get("/coin/:id/market-chart", async (req, res) => {
+  const { id } = req.params;
+  const { days = 30 } = req.query;
+  const cacheKey = `${id}-${days}`;
+  const now = Date.now();
+
+  if (coinCache[cacheKey] && now - coinCache[cacheKey].lastFetch < 2 * 60 * 1000) {
+    return res.json(coinCache[cacheKey].data);
+  }
+
+  try {
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/coins/${id}/market_chart`,
+      { params: { vs_currency: "usd", days } }
+    );
+
+    let chartData = response.data;
+    if (chartData.prices) {
+      chartData.prices = chartData.prices.filter((_, i) => i % 6 === 0);
+    }
+    if (chartData.market_caps) {
+      chartData.market_caps = chartData.market_caps.filter((_, i) => i % 6 === 0);
+    }
+    if (chartData.total_volumes) {
+      chartData.total_volumes = chartData.total_volumes.filter((_, i) => i % 6 === 0);
+    }
+
+    coinCache[cacheKey] = { data: chartData, lastFetch: now };
+    res.json(chartData);
+  } catch (err) {
+    if (coinCache[cacheKey]) {
+      return res.json(coinCache[cacheKey].data);
+    }
+    res.status(500).json({ error: `Failed to fetch ${id} chart` });
+  }
+});
+
+router.get("/trending", async (req, res) => {
+  const now = Date.now();
+
+  if (trendingCache && now - trendingLastFetch < CACHE_DURATION) {
+    return res.json(trendingCache);
+  }
+
+  try {
+    const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
+
+    let coins = response.data.coins || [];
+    if (!coins.length) {
+      coins = getFallbackTrending();
+    }
+
+    trendingCache = { coins };
+    trendingLastFetch = now;
+
+    res.json(trendingCache);
+  } catch (err) {
+    if (trendingCache) {
+      return res.json(trendingCache);
+    }
+    res.json({ coins: getFallbackTrending() });
+  }
+});
+
+router.get("/global", async (req, res) => {
+  const now = Date.now();
+
+  if (globalCache && now - globalLastFetch < 60 * 1000) {
+    return res.json(globalCache);
+  }
+
+  try {
+    const response = await axios.get("https://api.coingecko.com/api/v3/global");
+    globalCache = response.data;
+    globalLastFetch = now;
+    res.json(globalCache);
+  } catch (err) {
+    if (globalCache) {
+      return res.json(globalCache);
+    }
+    res.status(500).json({ error: "Failed to fetch global stats" });
+  }
+});
+
+function filterCoins(data, idsParam) {
+  if (!idsParam) return data;
+  const ids = idsParam.split(",").map((id) => id.trim().toLowerCase());
+  return data.filter((coin) => ids.includes(coin.id.toLowerCase()));
+}
+
+function getFallbackTrending() {
+  return [
+    {
+      item: {
+        id: "bitcoin",
+        name: "Bitcoin",
+        symbol: "btc",
+        small: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
+        market_cap_rank: 1,
+      },
+    },
+    {
+      item: {
+        id: "ethereum",
+        name: "Ethereum",
+        symbol: "eth",
+        small: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+        market_cap_rank: 2,
+      },
+    },
+    {
+      item: {
+        id: "solana",
+        name: "Solana",
+        symbol: "sol",
+        small: "https://assets.coingecko.com/coins/images/4128/small/solana.png",
+        market_cap_rank: 7,
+      },
+    },
+    {
+      item: {
+        id: "cardano",
+        name: "Cardano",
+        symbol: "ada",
+        small: "https://assets.coingecko.com/coins/images/975/small/cardano.png",
+        market_cap_rank: 8,
+      },
+    },
+    {
+      item: {
+        id: "dogecoin",
+        name: "Dogecoin",
+        symbol: "doge",
+        small: "https://assets.coingecko.com/coins/images/5/small/dogecoin.png",
+        market_cap_rank: 9,
+      },
+    },
+  ];
+}
 
 module.exports = router;
