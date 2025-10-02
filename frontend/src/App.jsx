@@ -20,6 +20,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Alerts from "./pages/Alerts";
 import Watchlist from "./pages/Watchlist";
+import Profile from "./pages/Profile";
+import NotFound from "./pages/NotFound";
 import { WatchlistProvider } from "./context/WatchlistContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -45,6 +47,7 @@ function Navbar() {
         {token && <Link to="/portfolio">Portfolio</Link>}
         {token && <Link to="/alerts">Alerts</Link>}
         {token && <Link to="/watchlist">Watchlist</Link>}
+        {token && <Link to="/profile">Profile</Link>}
       </div>
 
       <div className="nav-right">
@@ -78,6 +81,14 @@ function RequireAuth({ children }) {
   return children;
 }
 
+function PublicRoute({ children }) {
+  const { token } = useContext(AuthContext);
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -91,6 +102,25 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/trending" element={<Trending />} />
               <Route path="/coin/:id" element={<CoinDetails />} />
+              <Route path="*" element={<NotFound />} />
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <PublicRoute>
+                    <Register />
+                  </PublicRoute>
+                }
+              />
+
+              {/* Protected routes */}
               <Route
                 path="/portfolio"
                 element={
@@ -115,8 +145,14 @@ function App() {
                   </RequireAuth>
                 }
               />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <Profile />
+                  </RequireAuth>
+                }
+              />
             </Routes>
             <Footer />
             <ToastContainer

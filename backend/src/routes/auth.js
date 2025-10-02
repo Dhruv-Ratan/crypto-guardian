@@ -1,12 +1,13 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const jwt = require("jsonwebtoken")
-const pool = require("../db")
-const { body, validationResult } = require("express-validator")
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const pool = require("../db");
+const { body, validationResult } = require("express-validator");
+const authMiddleware = require("../middleware/authMiddleware");
 
-const router = express.Router()
-const JWT_SECRET = process.env.JWT_SECRET || "supersecret"
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d"
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 router.post(
     "/register",
@@ -14,76 +15,110 @@ router.post(
     body("email").isEmail().withMessage("Valid email is required"),
     body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
     async (req, res) => {
-        const errors = validationResult(req)
+        const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() })
+            return res.status(400).json({ errors: errors.array() });
         }
         try {
-            const { username, email, password } = req.body
+            const { username, email, password } = req.body;
             const existingUser = await pool.query(
                 "SELECT * FROM users WHERE email=$1 OR username=$2",
                 [email.toLowerCase(), username.trim()]
-            )
+            );
             if (existingUser.rows.length > 0) {
-                return res.status(400).json({ error: "User already exists" })
+                return res.status(400).json({ error: "User already exists" });
             }
-            const salt = await bcrypt.genSalt(10)
-            const hash = await bcrypt.hash(password, salt)
+            const salt = await bcrypt.genSalt(10);
+            const hash = await bcrypt.hash(password, salt);
             const result = await pool.query(
                 "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email",
                 [username.trim(), email.toLowerCase(), hash]
-            )
-            const user = result.rows[0]
-            const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
-            res.status(201).json({ user, token })
+            );
+            const user = result.rows[0];
+            const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+            res.status(201).json({ user, token });
         } catch (err) {
-            console.error("🔥 Registration error:", err.message)
-            res.status(500).json({ error: "Registration failed" })
+            console.error("🔥 Registration error:", err.message);
+            res.status(500).json({ error: "Registration failed" });
         }
     }
-)
+);
 
 router.post("/login", async (req, res) => {
     try {
-        const { emailOrUsername, password } = req.body
-        const val = emailOrUsername.trim().toLowerCase()
+        const { emailOrUsername, password } = req.body;
+        const val = emailOrUsername.trim().toLowerCase();
         const userRes = await pool.query(
             "SELECT id, username, email, password_hash FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1",
             [val]
-        )
+        );
         if (!userRes.rows.length) {
-            return res.status(400).json({ error: "Invalid credentials" })
+            return res.status(400).json({ error: "Invalid credentials" });
         }
-        const user = userRes.rows[0]
-        const match = await bcrypt.compare(password, user.password_hash)
+        const user = userRes.rows[0];
+        const match = await bcrypt.compare(password, user.password_hash);
         if (!match) {
-            return res.status(400).json({ error: "Invalid credentials" })
+            return res.status(400).json({ error: "Invalid credentials" });
         }
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
-        res.json({ token, user: { id: user.id, username: user.username, email: user.email } })
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
     } catch (err) {
-        console.error("🔥 Login error:", err.message)
-        res.status(500).json({ error: "Login failed" })
+        console.error("🔥 Login error:", err.message);
+        res.status(500).json({ error: "Login failed" });
     }
-})
+});
 
 router.get("/me", async (req, res) => {
     try {
-        const authHeader = req.headers["authorization"]
+        const authHeader = req.headers["authorization"];
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({ error: "No token provided" })
+            return res.status(401).json({ error: "No token provided" });
         }
-        const token = authHeader.split(" ")[1]
-        const decoded = jwt.verify(token, JWT_SECRET)
-        const result = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [decoded.id])
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const result = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [decoded.id]);
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "User not found" })
+            return res.status(404).json({ error: "User not found" });
         }
-        res.json(result.rows[0])
+        res.json(result.rows[0]);
     } catch (err) {
-        console.error("🔥 Me error:", err.message)
-        res.status(500).json({ error: "Failed to fetch user" })
+        console.error("🔥 Me error:", err.message);
+        res.status(500).json({ error: "Failed to fetch user" });
     }
-})
+});
 
-module.exports = router
+router.put("/update", authMiddleware, async (req, res) => {
+    try {
+        const { username, email } = req.body;
+        const result = await pool.query(
+            "UPDATE users SET username=$1, email=$2 WHERE id=$3 RETURNING id, username, email",
+            [username, email, req.userId]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("🔥 Update user error:", err.message);
+        res.status(500).json({ error: "Failed to update user info" });
+    }
+});
+
+router.put("/change-password", authMiddleware, async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const userRes = await pool.query("SELECT password_hash FROM users WHERE id=$1", [req.userId]);
+        if (!userRes.rows.length) return res.status(404).json({ error: "User not found" });
+
+        const valid = await bcrypt.compare(oldPassword, userRes.rows[0].password_hash);
+        if (!valid) return res.status(400).json({ error: "Incorrect old password" });
+
+        const salt = await bcrypt.genSalt(10);
+        const newHash = await bcrypt.hash(newPassword, salt);
+        await pool.query("UPDATE users SET password_hash=$1 WHERE id=$2", [newHash, req.userId]);
+
+        res.json({ message: "Password updated successfully" });
+    } catch (err) {
+        console.error("🔥 Change password error:", err.message);
+        res.status(500).json({ error: "Failed to change password" });
+    }
+});
+
+module.exports = router;

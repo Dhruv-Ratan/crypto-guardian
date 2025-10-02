@@ -1,10 +1,9 @@
 const express = require("express");
-const axios = require("axios");
+const fetchWithCache = require("../coingeckoClient");
 const router = express.Router();
 
 let cachedMarket = null;
 let marketLastFetch = 0;
-
 let coinCache = {};
 let trendingCache = null;
 let trendingLastFetch = 0;
@@ -27,35 +26,27 @@ router.get("/market-data", async (req, res) => {
             return res.json(filterCoins(cachedMarket, req.query.ids));
         }
 
-        const response = await axios.get(
-            "https://api.coingecko.com/api/v3/coins/markets",
-            {
-                params: {
-                    vs_currency: "usd",
-                    order: "market_cap_desc",
-                    per_page: 50,
-                    page: 1,
-                    sparkline: true,
-                    price_change_percentage: "1h,24h,7d",
-                },
-            }
-        );
+        const data = await fetchWithCache("https://api.coingecko.com/api/v3/coins/markets", {
+            vs_currency: "usd",
+            order: "market_cap_desc",
+            per_page: 50,
+            page: 1,
+            sparkline: true,
+            price_change_percentage: "1h,24h,7d",
+        });
 
-        let data = response.data.map((coin) => ({
+        let processed = data.map((coin) => ({
             ...coin,
             sparkline_processed: coin.sparkline_in_7d
                 ? downsample(coin.sparkline_in_7d.price)
                 : null,
         }));
 
-        cachedMarket = data;
+        cachedMarket = processed;
         marketLastFetch = now;
-
-        res.json(filterCoins(cachedMarket, req.query.ids));
+        res.json(filterCoins(processed, req.query.ids));
     } catch (err) {
-        if (cachedMarket) {
-            return res.json(filterCoins(cachedMarket, req.query.ids));
-        }
+        if (cachedMarket) return res.json(filterCoins(cachedMarket, req.query.ids));
         res.status(500).json({ error: "Failed to fetch market data" });
     }
 });
@@ -69,26 +60,19 @@ router.get("/coin/:id", async (req, res) => {
     }
 
     try {
-        const response = await axios.get(
-            `https://api.coingecko.com/api/v3/coins/${id}`,
-            {
-                params: {
-                    localization: false,
-                    tickers: false,
-                    market_data: true,
-                    community_data: false,
-                    developer_data: false,
-                    sparkline: false,
-                },
-            }
-        );
+        const data = await fetchWithCache(`https://api.coingecko.com/api/v3/coins/${id}`, {
+            localization: false,
+            tickers: false,
+            market_data: true,
+            community_data: false,
+            developer_data: false,
+            sparkline: false,
+        });
 
-        coinCache[id] = { data: response.data, lastFetch: now };
-        res.json(response.data);
-    } catch (err) {
-        if (coinCache[id]) {
-            return res.json(coinCache[id].data);
-        }
+        coinCache[id] = { data, lastFetch: now };
+        res.json(data);
+    } catch {
+        if (coinCache[id]) return res.json(coinCache[id].data);
         res.status(500).json({ error: `Failed to fetch ${id} details` });
     }
 });
@@ -104,22 +88,19 @@ router.get("/coin/:id/market-chart", async (req, res) => {
     }
 
     try {
-        const response = await axios.get(
-            `https://api.coingecko.com/api/v3/coins/${id}/market_chart`,
-            { params: { vs_currency: "usd", days } }
-        );
+        const data = await fetchWithCache(`https://api.coingecko.com/api/v3/coins/${id}/market_chart`, {
+            vs_currency: "usd",
+            days,
+        });
 
-        let chartData = response.data;
-        if (chartData.prices) {
-            chartData.prices = downsample(chartData.prices.map((p) => p[1]));
+        if (data.prices) {
+            data.prices = downsample(data.prices.map((p) => p[1]));
         }
 
-        coinCache[cacheKey] = { data: chartData, lastFetch: now };
-        res.json(chartData);
-    } catch (err) {
-        if (coinCache[cacheKey]) {
-            return res.json(coinCache[cacheKey].data);
-        }
+        coinCache[cacheKey] = { data, lastFetch: now };
+        res.json(data);
+    } catch {
+        if (coinCache[cacheKey]) return res.json(coinCache[cacheKey].data);
         res.status(500).json({ error: `Failed to fetch ${id} chart` });
     }
 });
@@ -132,21 +113,15 @@ router.get("/trending", async (req, res) => {
     }
 
     try {
-        const response = await axios.get("https://api.coingecko.com/api/v3/search/trending");
-
-        let coins = response.data.coins || [];
-        if (!coins.length) {
-            coins = getFallbackTrending();
-        }
+        const data = await fetchWithCache("https://api.coingecko.com/api/v3/search/trending");
+        let coins = data.coins || [];
+        if (!coins.length) coins = getFallbackTrending();
 
         trendingCache = { coins };
         trendingLastFetch = now;
-
         res.json(trendingCache);
-    } catch (err) {
-        if (trendingCache) {
-            return res.json(trendingCache);
-        }
+    } catch {
+        if (trendingCache) return res.json(trendingCache);
         res.json({ coins: getFallbackTrending() });
     }
 });
@@ -159,51 +134,11 @@ function filterCoins(data, idsParam) {
 
 function getFallbackTrending() {
     return [
-        {
-            item: {
-                id: "bitcoin",
-                name: "Bitcoin",
-                symbol: "btc",
-                small: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
-                market_cap_rank: 1,
-            },
-        },
-        {
-            item: {
-                id: "ethereum",
-                name: "Ethereum",
-                symbol: "eth",
-                small: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
-                market_cap_rank: 2,
-            },
-        },
-        {
-            item: {
-                id: "solana",
-                name: "Solana",
-                symbol: "sol",
-                small: "https://assets.coingecko.com/coins/images/4128/small/solana.png",
-                market_cap_rank: 7,
-            },
-        },
-        {
-            item: {
-                id: "cardano",
-                name: "Cardano",
-                symbol: "ada",
-                small: "https://assets.coingecko.com/coins/images/975/small/cardano.png",
-                market_cap_rank: 8,
-            },
-        },
-        {
-            item: {
-                id: "dogecoin",
-                name: "Dogecoin",
-                symbol: "doge",
-                small: "https://assets.coingecko.com/coins/images/5/small/dogecoin.png",
-                market_cap_rank: 9,
-            },
-        },
+        { item: { id: "bitcoin", name: "Bitcoin", symbol: "btc", small: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png", market_cap_rank: 1 } },
+        { item: { id: "ethereum", name: "Ethereum", symbol: "eth", small: "https://assets.coingecko.com/coins/images/279/small/ethereum.png", market_cap_rank: 2 } },
+        { item: { id: "solana", name: "Solana", symbol: "sol", small: "https://assets.coingecko.com/coins/images/4128/small/solana.png", market_cap_rank: 7 } },
+        { item: { id: "cardano", name: "Cardano", symbol: "ada", small: "https://assets.coingecko.com/coins/images/975/small/cardano.png", market_cap_rank: 8 } },
+        { item: { id: "dogecoin", name: "Dogecoin", symbol: "doge", small: "https://assets.coingecko.com/coins/images/5/small/dogecoin.png", market_cap_rank: 9 } },
     ];
 }
 
